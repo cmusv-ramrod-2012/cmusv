@@ -13,7 +13,7 @@
 # other information must not be copied.
 #
 # The CMU-SV community typically does not refer to courses by their number, where as on the Pittsburgh campus,
-# most undergraduate courses are referred to by their number. 
+# most undergraduate courses are referred to by their number.
 #
 # The system asks for the tuple (course_number, semester, and year) to create the course and then puts the user
 # in an edit mode prompting reasonable defaults from the last time the course was offered. If nothing has changed,
@@ -27,13 +27,17 @@
 # has "configured" the course. (Or verified it's settings.) If this doesn't happen, the system should periodically
 # remind faculty about the change.)
 #
-#
+# Course has grading rules. These include grading cut_offs for grade's like A,A-,B+ etc.
 
 class Course < ActiveRecord::Base
   has_many :teams
   belongs_to :course_number
   has_many :pages, :order => "position"
-#  has_and_belongs_to_many :users, :join_table=>"courses_users"
+  has_many :assignments, :order => "assignment_order"
+
+
+  #----- delete this when implementing deliverable-----#
+  has_many :deliverables
 
   has_many :faculty_assignments
   has_many :faculty, :through => :faculty_assignments, :source => :user
@@ -43,8 +47,14 @@ class Course < ActiveRecord::Base
 
   has_many :presentations
 
+  has_many :grades, :through => :assignments
+
+  has_one :grading_rule, :dependent => :destroy
+  accepts_nested_attributes_for :grading_rule
+  attr_accessible :grading_rule_attributes
+
   validates_presence_of :semester, :year, :mini, :name
-  validate :validate_faculty
+  validate :validate_faculty_assignments
 
   versioned
   belongs_to :updated_by, :class_name => 'User', :foreign_key => 'updated_by_user_id'
@@ -57,9 +67,15 @@ class Course < ActiveRecord::Base
 
   attr_accessible :course_number_id, :name, :number, :semester, :mini, :primary_faculty_label,
                   :secondary_faculty_label, :twiki_url, :remind_about_effort, :short_name, :year,
-                  :configure_class_mailinglist, :peer_evaluation_first_email, :peer_evaluation_second_email,
-                  :configure_teams_name_themselves, :curriculum_url, :configure_course_twiki,
+                  :peer_evaluation_first_email, :peer_evaluation_second_email,
+                  :curriculum_url, :configure_course_twiki,
                   :faculty_assignments_override
+
+  include PeopleInACollection
+
+  def validate_faculty_assignments
+    validate_members :faculty_assignments_override
+  end
 
 #  def to_param
 #    display_course_name
@@ -69,6 +85,38 @@ class Course < ActiveRecord::Base
     mini_text = self.mini == "Both" ? "" : self.mini
     result = self.short_or_full_name + self.semester + mini_text + self.year.to_s
     result.gsub(" ", "")
+  end
+
+  def display_for_course_page
+# Consider this
+#    "#{self.number} #{self.name} (#{self.short_name}) #{self.display_semester}"
+    "#{self.number} #{self.name} (#{self.short_name})"
+  end
+
+  def display_name
+    return self.name if self.short_name.blank?
+    return self.name + " (" + self.short_name + ")"
+  end
+
+  def short_or_full_name
+    unless self.short_name.blank?
+      self.short_name
+    else
+      self.name
+    end
+  end
+
+  def short_or_course_number
+    unless self.short_name.blank?
+      self.short_name
+    else
+      self.number
+    end
+  end
+
+  def display_semester
+    mini_text = self.mini == "Both" ? "" : self.mini + " "
+    return self.semester + " " + mini_text + self.year.to_s
   end
 
   #before_validation :set_updated_by_user -- this needs to be done by the controller
@@ -101,6 +149,15 @@ class Course < ActiveRecord::Base
     return self.for_semester(AcademicCalendar.next_semester(),
                              AcademicCalendar.next_semester_year())
   end
+
+  def self.first_email_on_peer_evaluation_is_today
+    Course.where(:peer_evaluation_first_email => Date.today).all
+  end
+
+  def self.second_email_on_peer_evaluation_is_today
+    Course.where(:peer_evaluation_second_email => Date.today).all
+  end
+
 
   def course_length
     if self.mini == "Both" then
@@ -145,23 +202,6 @@ class Course < ActiveRecord::Base
     self.year.to_i * 100 + self.course_end
   end
 
-  def display_name
-    return self.name if self.short_name.blank?
-    return self.name + " (" + self.short_name + ")"
-  end
-
-  def short_or_full_name
-    unless self.short_name.blank?
-      self.short_name
-    else
-      self.name
-    end
-  end
-
-  def display_semester
-    mini_text = self.mini == "Both" ? "" : self.mini + " "
-    return self.semester + " " + mini_text + self.year.to_s
-  end
 
   def self.remind_about_effort_course_list
     courses = Course.where(:remind_about_effort => true, :year => Date.today.cwyear, :semester => AcademicCalendar.current_semester(), :mini => "Both").all
@@ -183,24 +223,12 @@ class Course < ActiveRecord::Base
 
   #When modifying validate_faculty or update_faculty, modify the same code in team.rb
   #Todo - move to a higher class or try as a mixin
-  def validate_faculty
-    return "" if faculty_assignments_override.nil?
-
-    self.faculty_assignments_override = faculty_assignments_override.select { |name| name != nil && name.strip != "" }
-    list = map_faculty_strings_to_users(faculty_assignments_override)
-    list.each_with_index do |user, index|
-      if user.nil?
-        self.errors.add(:base, "Person " + faculty_assignments_override[index] + " not found")
-      end
-    end
-  end
-
   def update_faculty
     return "" if faculty_assignments_override.nil?
     self.faculty = []
 
     self.faculty_assignments_override = faculty_assignments_override.select { |name| name != nil && name.strip != "" }
-    list = map_faculty_strings_to_users(self.faculty_assignments_override)
+    list = map_member_strings_to_users(self.faculty_assignments_override)
     raise "Error converting faculty_assignments_override to IDs!" if list.include?(nil)
     self.faculty = list
     faculty_assignments_override = nil
@@ -208,7 +236,7 @@ class Course < ActiveRecord::Base
   end
 
   def copy_as_new_course
-    new_course = self.clone
+    new_course = self.dup
     new_course.is_configured = false
     new_course.configured_by = nil
     new_course.updated_by = nil
@@ -216,13 +244,15 @@ class Course < ActiveRecord::Base
     new_course.updated_at = Time.now
     new_course.curriculum_url = nil if self.curriculum_url.nil? || self.curriculum_url.include?("twiki")
     new_course.faculty = self.faculty
+    new_course.grading_rule = self.grading_rule.dup if self.grading_rule.present?
+    self.assignments.each { |assignment| new_course.assignments << assignment.dup } if self.assignments.present?
     return new_course
   end
 
   #Find the last time this course was offered
   def self.last_offering(course_number)
     #TODO: move this sorting into the database
-    offerings = Course.find_all_by_number(course_number)
+    offerings = Course.where(:number => course_number).all
     offerings = offerings.sort_by { |c| -c.sortable_value } # note the '-' is for desc sorting
     return offerings.first
   end
@@ -231,6 +261,7 @@ class Course < ActiveRecord::Base
     next_year = year + 1
     if Course.for_semester(semester, next_year).empty?
       Course.for_semester(semester, year).each do |last_year_course|
+        puts last_year_course.id
         next_year_course = last_year_course.copy_as_new_course
         next_year_course.peer_evaluation_first_email += 1.year if next_year_course.peer_evaluation_first_email
         next_year_course.peer_evaluation_second_email += 1.year if next_year_course.peer_evaluation_second_email
@@ -242,6 +273,12 @@ class Course < ActiveRecord::Base
     end
   end
 
+  def copy_teams_to_another_course(destination_course_id)
+    #Todo: at some point, refactor teams to be an ordered list, so that we wouldn't need to reverse it here to preserve ordering.
+    self.teams.reverse.each do |team|
+      team.clone_to_another_course(destination_course_id)
+    end
+  end
 
   def current_mini?
     case self.mini
@@ -258,6 +295,31 @@ class Course < ActiveRecord::Base
 
   def update_email_address
     self.email = build_email
+  end
+
+  def email_faculty_to_configure_course_unless_already_configured
+    CourseMailer.configure_course_faculty_email(self).deliver unless self.is_configured?
+  end
+
+
+  def nomenclature_assignment_or_deliverable
+    if self.grading_rule.nil? || self.grading_rule.is_nomenclature_deliverable?
+      "deliverable"
+    else
+      "assignment"
+    end
+  end
+
+  def grade_type_points_or_weights
+    if self.grading_rule.nil? || self.grading_rule.grade_type=="points"
+      "points"
+    else
+      "weights"
+    end
+  end
+
+  def registered_students_or_on_teams
+    self.registered_students | self.teams.collect { |team| team.members }.flatten
   end
 
   protected
@@ -285,14 +347,33 @@ class Course < ActiveRecord::Base
 
   def update_distribution_list
     if self.updating_email
-      recipients = self.faculty | self.registered_students | self.teams.collect { |team| team.members }.flatten
+      recipients = self.faculty | self.registered_students_or_on_teams
       Delayed::Job.enqueue(GoogleMailingListJob.new(self.email, self.email, recipients, self.email, "Course distribution list", self.id, "courses"))
     end
   end
 
-  def map_faculty_strings_to_users(faculty_assignments_override_list)
-    faculty_assignments_override_list.map { |member_name| User.find_by_human_name(member_name) }
+  # convenience method for an admin. destination_course_id is the first time that course was offered
+  def copy_pages_to_another_course(destination_course_id, url_prefix)
+    self.pages.each do |page|
+      new = page.dup
+      new.course_id = destination_course_id
+      new.url = url_prefix + page.url
+      new.save
+    end
   end
 
-
+  public
+  def registered_students_and_students_on_teams_hash
+    students = Hash.new
+    self.registered_students.each do |student|
+      students[student.human_name] = {:hub => true}
+    end
+    self.teams.each do |team|
+      team.members.each do |user|
+        students[user.human_name] = (students[user.human_name] || Hash.new).merge({:team => true, :team_name => team.name})
+      end
+    end
+    return students
+  end
 end
+

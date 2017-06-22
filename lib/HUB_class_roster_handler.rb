@@ -1,4 +1,6 @@
 module HUBClassRosterHandler
+  extend ActionView::Helpers::TextHelper
+
   def self.handle roster_text
     raise ArgumentError if roster_text.blank?
     roster_text = roster_text.gsub("\n", ' ').gsub("\r", ' ')
@@ -72,66 +74,87 @@ module HUBClassRosterHandler
       course.save
     end
     Rails.logger.debug roster_changes
-    self.send_emails roster_changes
+#    Disable emailing professors about roster changes
+#    self.send_emails roster_changes
     return changes
   end
 
   def self.email_help_about_missing_student webiso_account, course
-      options = {:to => "todd.sedano@sv.cmu.edu", :subject => "Need to add this user #{webiso_account}@andrew.cmu.edu",
-                 :message => "We were adding registered HUB users to the course #{course.name}, but they are not in the system.",
-                 :url => "http://rails.sv.cmu.edu/people/new?webiso_account=#{webiso_account}@andrew.cmu.edu&is_student=true",
-                 :url_label => "Add person"}
-      GenericMailer.email(options).deliver
+    options = {:to => "help@sv.cmu.edu", :subject => "Need to add this user #{webiso_account}@andrew.cmu.edu",
+               :message => "We were adding registered HUB users to the course #{course.name}, but they are not in the system.",
+               :url => "http://whiteboard.sv.cmu.edu/people/new?webiso_account=#{webiso_account}@andrew.cmu.edu&is_student=true",
+               :url_label => "Add person"}
+    GenericMailer.email(options).deliver
   end
 
 
   def self.send_emails roster_changes
     roster_changes.each do |course, info|
-      next if info[:added].blank? && info[:dropped].blank?
+      next if info[:added].blank? && info[:dropped].blank? && info[:not_in_system].blank?
       email_professors_about_added_and_dropped_students(course, info)
     end
   end
 
   def self.email_professors_about_added_and_dropped_students course, info
     faculty_emails = course.faculty.collect(&:email)
-    if faculty_emails
+    if faculty_emails.any?
       options = {:to => faculty_emails, :subject => "Roster change for your course #{course.name}",
                  :message => self.roster_change_message(course, info[:added], info[:dropped], info[:not_in_system])}
 # The message handles this well...
 #                 :url_label => "Your course: " + course.number + " " + course.short_or_full_name,
-#                 :url => "http://rails.sv.cmu.edu/courses/#{course.id}" }
-      else
-        options = {:to => "chris.ziese@sv.cmu.edu", :subject => "Please add faculty to this course",
-                   :message => "The HUB importer code was just run, however this course no faculty assigned to it. Thus I could not email them.",
-                   :url_label => "The course: " + course.number + " " + course.short_or_full_name,
-                   :url => "http://rails.sv.cmu.edu/courses/#{course.id}" }
+#                 :url => "http://whiteboard.sv.cmu.edu/courses/#{course.id}" }
+    else
+      options = {:to => "gerry.elizondo@sv.cmu.edu", :subject => "Please add faculty to this course",
+                 :message => "The HUB importer code was just run, however this course has no faculty assigned to it. Thus, I could not email them.",
+                 :url_label => "The course: " + course.number + " " + course.short_or_full_name,
+                 :url => "http://whiteboard.sv.cmu.edu/courses/#{course.id}" }
     end
 
     GenericMailer.email(options).deliver
   end
 
   def self.roster_change_message course, added, dropped, not_in_system
-    message = "** This is an experimental feature. ** By loading in HUB data we can auto create class email distribution lists. Also, if you create teams with the rails system, then you can see who has not been assigned to a team. This does not currently track students on wait-lists. We only have access to students registered in 96-xxx courses.<br/><br/>"
+
+    unless course
+      message = "This email is supposed to contain information about course roster changes, but an error occurred while"
+      message += "generating its contents.  Please contact <a href='mailto:todd.sedano@sv.cmu.edu?subject=Roster%20Email%20Error'>Todd Sedano</a>"
+      return message += "to resolve any issues."
+    end
+
+    message = "** This is an experimental feature. ** "
     message += "The official registration list for your course can be <a href='https://acis.as.cmu.edu/grades/'>found here</a>.<br/><br/>"
+    message += "By loading in HUB data we can auto create class email distribution lists. Also, if you create teams with the rails system, then you can see who has not been assigned to a team. This does not currently track students on wait-lists. We only have access to students registered in 96-xxx courses.<br/><br/>"
     message += "The HUB does not provide us with registration information on a daily basis. Periodically, we manually upload HUB registrations. This is a summary of changes since the last time we updated information from the HUB.<br/><br/>"
 
-    if not_in_system.any?
-      message += "There are #{not_in_system.count} registered students that are not in any of our SV systems:<br/>"
-      not_in_system.each { |student| message += "&nbsp;&nbsp;&nbsp;#{student}@andrew.cmu.edu<br/>" }
-      message += "We can easily create accounts for these students. Please forward this email to help@sv.cmu.edu indicating which students you want added. (The rails system will create google and twiki accounts.)<br/><br/>"
+    unless not_in_system.blank?
+      message += "#{pluralize(not_in_system.count, "registered student")} #{not_in_system.count > 1 ? "are" : "is"} not in any of our SV systems:<br/>"
+      not_in_system.each { |student|
+        escaped_student = ERB::Util.html_escape(student)
+        message += "&nbsp;&nbsp;&nbsp;#{escaped_student}@andrew.cmu.edu<br/>"
+      }
+      message += "We can easily create accounts for #{not_in_system.count > 1 ? "these" : "this"} #{pluralize(not_in_system.count, "student")}. Please forward this email to help@sv.cmu.edu indicating which students you want added. (The rails system will create google and twiki accounts.)<br/><br/>"
     end
 
-    if added.any?
-      message += "#{added.count} students were added to the course:<br/>"
-      added.each { |student| message += "&nbsp;&nbsp;&nbsp;#{student.first_name} #{student.last_name}<br/>" }
+    unless added.blank?
+      message += "#{pluralize(added.count, "student")} #{added.count > 1 ? "were" : "was"} added to the course:<br/>"
+      added.each { |student|
+        escaped_first_name = ERB::Util.html_escape(student.first_name)
+        escaped_last_name = ERB::Util.html_escape(student.last_name)
+        message += "&nbsp;&nbsp;&nbsp;#{escaped_first_name} #{escaped_last_name}<br/>"
+      }
     end
 
-    if dropped.any?
-      message += "#{dropped.count} students were dropped from the course:<br/>"
-      dropped.each { |student| message += "&nbsp;&nbsp;&nbsp;#{student.first_name} #{student.last_name}<br/>" }
+    unless dropped.blank?
+      message += "#{pluralize(dropped.count, "student")} #{dropped.count > 1 ? "were" : "was"} dropped from the course:<br/>"
+      dropped.each { |student|
+        escaped_first_name = ERB::Util.html_escape(student.first_name)
+        escaped_last_name = ERB::Util.html_escape(student.last_name)
+        message += "&nbsp;&nbsp;&nbsp;#{escaped_first_name} #{escaped_last_name}<br/>"
+      }
     end
 
-    message += "<br/>The system will be updating your course mailing list (#{course.email}) For more information, see your <a href='http://rails.sv.cmu.edu/courses/#{course.id}'>course tools</a><br/><br/>"
+    escaped_course_email = ERB::Util.html_escape(course.email)
+    message += "<br/>The system will be updating your course mailing list (#{escaped_course_email}) For more information, see your <a href='http://whiteboard.sv.cmu.edu/courses/#{course.id}'>course tools</a><br/><br/>"
 
     message
   end

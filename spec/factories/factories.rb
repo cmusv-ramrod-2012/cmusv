@@ -1,7 +1,16 @@
-#puts "....factories loaded....."
-#puts caller.join("\n")
-
+# For each model in the system, include one factory that creates the bare minimum necessary to save the object.
+# In other words, it should pass all validations, but have nothing extra
 FactoryGirl.define do
+
+  factory :assignment do
+    association :course, :factory => :fse
+    maximum_score 20.0
+    name "MyString"
+    is_team_deliverable false
+    due_date "2012-10-03 12:48:24"
+    task_number 1
+    is_submittable true
+  end
 
   factory :course, class: Course do
     name 'Course'
@@ -10,13 +19,14 @@ FactoryGirl.define do
     mini 'Both'
     number '96-700'
     updated_by_user_id 10
+    association :grading_rule, :factory => :grading_rule_points
   end
-
 
   factory :delayed_system_job do
   end
 
   factory :deliverable do
+    association :assignment, :factory => :assignment
     association :course, :factory => :course
     association :creator, :factory => :student_sally
   end
@@ -24,7 +34,6 @@ FactoryGirl.define do
   factory :deliverable_attachment do
     association :deliverable, :factory => :deliverable
   end
-
 
   factory :effort_log_line_item, class: EffortLogLineItem do
     association :course, :factory => :fse
@@ -38,6 +47,16 @@ FactoryGirl.define do
     year monday_of_this_week.cwyear
     week_number monday_of_this_week.cweek
     association :user, :factory => :student_sam_user
+  end
+
+  factory :faculty_assignment, class: FacultyAssignment do
+    course_id 1
+    user_id 999
+  end
+
+  factory :feedback_from_sam, class: PresentationFeedback do
+    association :evaluator, :factory => :student_sam
+    association :presentation, :factory => :presentation
   end
 
   factory :page, class: Page do
@@ -81,6 +100,32 @@ FactoryGirl.define do
 #  remember_created_at Time.now.to_f.to_s
   end
 
+  factory :people_search_default, class: PeopleSearchDefault do
+  end
+
+  factory :presentation do
+    name "Test Presentation"
+    description "Desc"
+    task_number "1"
+    presentation_date Date.new(2011, 1, 1)
+    association :course, :factory => :course
+    association :team, :factory => :team
+  end
+
+  factory :presentation_feedback_questions, class: PresentationQuestion do
+    deleted false
+  end
+
+  factory :presentation_feedback_answer, class: PresentationFeedbackAnswer do
+    rating 2
+    association :question, :factory => :presentation_feedback_questions
+    association :feedback, :factory => :feedback_from_sam
+  end
+
+  factory :registration do
+    course_id 1
+    user
+  end
 
   factory :scotty_dog_saying, class: ScottyDogSaying do
     association :user, :factory => :student_sam
@@ -95,13 +140,13 @@ FactoryGirl.define do
     confirmed false
   end
 
-  factory :sponsored_project_sponsor, class: SponsoredProjectSponsor do
-    sequence(:name) { |n| "Sponsor #{n}" }
-  end
-
   factory :sponsored_project, class: SponsoredProject do
     sequence(:name) { |n| "Project #{n}" }
     association :sponsor, :factory => :sponsored_project_sponsor
+  end
+
+  factory :sponsored_project_sponsor, class: SponsoredProjectSponsor do
+    sequence(:name) { |n| "Sponsor #{n}" }
   end
 
   factory :sponsored_project_allocation, class: SponsoredProjectAllocation do
@@ -112,7 +157,7 @@ FactoryGirl.define do
   end
 
   factory :suggestion do
-    page "http://rails.sv.cmu.edu"
+    page "http://whiteboard.sv.cmu.edu"
     comment "This is the best website ever"
   end
 
@@ -140,20 +185,6 @@ FactoryGirl.define do
     image_uri "/images/mascot.jpg"
     email Time.now.to_f.to_s + "@andrew.cmu.edu"
 #  remember_created_at Time.now.to_f.to_s
-  end
-
-
-  factory :presentation do
-    name "Test Presentation"
-    description "Desc"
-    task_number "1"
-    presentation_date Date.new(2011, 1, 1)
-    association :course, :factory => :course
-    association :team, :factory => :team
-  end
-
-  factory :presentation_feedback_questions, class: PresentationQuestion do
-    deleted false
   end
 
 end

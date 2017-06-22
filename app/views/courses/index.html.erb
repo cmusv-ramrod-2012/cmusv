@@ -1,29 +1,39 @@
 <% content_for :tablesorter do %>
-    <%= javascript_include_tag 'tablesorter' %>
-    <%= javascript_include_tag 'tablesorter_filter' %>
+
+    <%= javascript_include_tag 'jquery_tablesorter_min.js' %>
+    <%= javascript_include_tag 'jquery_quicksearch.js' %>
+    
     <script type="text/javascript">
         $(document).ready(function () {
-                    if ($("#filterBoxOne").prop("disabled") == true) {
-                        $('#filterBoxOne').val('');
-                        $('#filterBoxOne').removeAttr("disabled");
-                        $('#filterBoxOne').focus();
-                    }
-                    $("#courses_table").tablesorter({widgets:['zebra']})
-                            .tablesorterFilter({ filterContainer:$("#filterBoxOne"),
-                                filterClearContainer:$("#filterClearOne"),
-                                filterColumns:[0, 1, 2, 4],
-                                filterCaseSensitive:false
-                            });
-                    <% if !@all_courses %>
-                    $(".all_courses").hide();
-                    <% end %>
-                }
-        );
+            var $search = $("#filterBoxOne");
+            if ($search.prop("disabled") == true) {
+                $search.val('');
+                $search.removeAttr("disabled");
+                $search.focus();
+            }
+            $("#courses_table").tablesorter({
+                headers:{5:{sorter:false}}
+            });
+            $search.quicksearch('#courses_table tbody tr');
+
+            <% if !@all_courses %>
+            $(".all_courses").hide();
+            <% end %>
+
+            /* making the whole row of courses_table clickable
+            ***************************************************/
+            $('#courses_table tbody').on("click", "tr", function () {
+                window.location = $(this).find('a:last-child').attr('href');
+            });
+        });
+        
     </script>
+
 <% end %>
 
 <% if @all_courses %>
     <% content_for :title, 'All courses' %>
+    <%= render :partial => "my_courses" %>
     <h1>All Courses</h1>
     <div class="right_link"><%= link_to 'See current semester', :action => "current_semester" %></div>
     <%= render :partial => "index_courses_for_a_semester", :locals => {:style => nil} %>
@@ -34,14 +44,14 @@
       <h1><%= @semester %> <%= @year %> Courses</h1>
 
       <p>For more information about your options
-        see <%= link_to "course selections", "http://info.sv.cmu.edu/do/view/#{@semester}#{@year}" %></p>
+        see <%= link_to "course selections", "http://info.sv.cmu.edu/do/view/CurriculumLogistics/RegistrationInfo" %></p>
     </div>
     <!--
     <div class="right_link"><%= link_to 'See all courses', courses_path %></div>
     -->
     <!--
-      <div class="right_link" id="image_courses_for_a_semester"><%= link_to image_tag("/images/courses_list.png", :class => "icon", :size => "90x55", :alt => "Courses in semester", :title => "Courses in semester"), "url" %></div>
-      <div class="right_link" id="image_courses_for_a_semester"><%= link_to image_tag("/images/courses_list_by_mini.png", :class => "icon", :size => "90x55", :alt => "Courses in semester", :title => "Courses in semester"), "url" %></div>
+      <div class="right_link" id="image_courses_for_a_semester"><%= link_to image_tag("courses_list.png", :class => "icon", :size => "90x55", :alt => "Courses in semester", :title => "Courses in semester"), "url" %></div>
+      <div class="right_link" id="image_courses_for_a_semester"><%= link_to image_tag("courses_list_by_mini.png", :class => "icon", :size => "90x55", :alt => "Courses in semester", :title => "Courses in semester"), "url" %></div>
       -->
 
 
@@ -52,12 +62,12 @@
 -->
 
     <% if current_user.course_tools_view == "length" || params[:view] == "length" %>
-        <div class="right_link"><%= link_to image_tag("/images/courses_list_by_mini.png", :id => "course_tools_view_image", :class => "icon", :size => "90x55", :alt => "Courses in semester", :title => "Courses in semester"), "#" %></div>
+        <div class="right_link"><%= link_to image_tag("courses_list_by_mini.png", :id => "course_tools_view_image", :class => "icon", :size => "90x55", :alt => "Courses in semester", :title => "Courses in semester"), "#" %></div>
         <%= render :partial => "index_courses_by_length", :locals => {:style => nil, :state => "length"} %> <br/>
         <%= render :partial => "index_courses_for_a_semester", :locals => {:style => "display:none;"} %>
     <% else %>
         <%# This is the default option for those who have never hit the link %>
-        <div class="right_link"><%= link_to image_tag("/images/courses_list.png", :id => "course_tools_view_image", :class => "icon", :size => "90x55", :alt => "Courses in semester", :title => "Courses in semester"), "#" %></div>
+        <div class="right_link"><%= link_to image_tag("courses_list.png", :id => "course_tools_view_image", :class => "icon", :size => "90x55", :alt => "Courses in semester", :title => "Courses in semester"), "#" %></div>
         <%= render :partial => "index_courses_by_length", :locals => {:style => "display:none;", :state => "semester"} %>
         <br/>
         <%= render :partial => "index_courses_for_a_semester", :locals => {:style => nil} %>
@@ -80,7 +90,7 @@
                     $('#semester_length_courses').show('slow');
                     $('#mini_b_courses_table').show('slow');
                     $('#mini_a_courses_table').show('slow');
-                    $('#course_tools_view_image').attr("src", '/images/courses_list_by_mini.png');
+                    $('#course_tools_view_image').attr("src", 'courses_list_by_mini.png');
                 }
                 else {
                     new_state = "semester";
@@ -91,7 +101,7 @@
                     $('#semester_length_courses').hide('slow');
                     $('#mini_b_courses_table').hide('slow');
                     $('#mini_a_courses_table').hide('slow');
-                    $('#course_tools_view_image').attr("src", '/images/courses_list.png');
+                    $('#course_tools_view_image').attr("src", 'courses_list.png');
                 }
                 $.ajax({
                     type:'post',
@@ -112,7 +122,7 @@
       <span class="instructions">Only certain admin roles can see this information.</span>
 
       <h2>Upload Roster File</h2>
-      <% form_tag '/courses/upload', :multipart => true do %>
+      <%= form_tag '/courses/upload', :multipart => true do %>
           <%= file_field_tag "file" %>
           <%= submit_tag "Upload" %>
       <% end %>

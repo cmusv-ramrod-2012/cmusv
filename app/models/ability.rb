@@ -12,25 +12,28 @@ class Ability
     #   end
 
     can :manage, User, :id => user.id
-
     can :update, PageAttachment
+    can :see_student_grades, Course
 
 
-    if (user.human_name == "Todd Sedano" ||user.human_name == "Chris Zeise" || user.human_name == "Gerry Elizondo")
+    if (user.human_name == "Todd Sedano" ||user.human_name == "Chris Zeise" || user.human_name == "Stephanie Scott")
       can :upload, Course
     end
 
-    if (user.human_name == "Jazz Sabian" || user.human_name == "Stacy Marshall" || user.human_name == "Todd Sedano")
+    #  This next line is for testing purposes only when working on managing active directory from whiteboard
+    if (user.human_name == "Edward Akoto" || user.human_name == "Jazz Sabian" || user.human_name == "Albert Liu" || user.human_name == "Stacy Marshall" || user.human_name == "Todd Sedano" || user.human_name == "Stephanie Scott")
       can :create, User
     else
       cannot :create, User
     end
 
-    if (user.is_admin? || user.human_name == "Kaushik Gopal")
-      can :upload_photo, User
+    if (user.is_admin? || user.human_name == "Rofaida Abdelaal" || user.human_name == "Sarah Stanek")
+      can :upload_official_photo, User
+      can :update, User
     else
-      cannot :upload_photo, User
+      cannot :upload_official_photo, User
     end
+
 
     #Contracts manager
     if (user.is_admin? || user.human_name == "Ngoc Ho" || user.human_name == "Hector Rastrullo")
@@ -40,13 +43,30 @@ class Ability
       can :manage, SponsoredProject
     end
 
+    if (user.is_admin? || user.is_staff?)
+      can :view_assignments, Job
+    end
+
+    if (user.human_name == "Wendy Fong" || user.human_name == "Sylvia Arifin")
+      can :manage, Job
+    end
+
     if (user.is_admin?)
       can :manage, Course
+      can :manage, Job
+      can :manage, User
+      can :see_current_sign_in_ip, User
+    else
+      cannot :see_current_sign_in_ip, User
     end
+
     if  (user.is_staff?)
       can [:teach, :create, :update, :peer_evaluation, :team_formation], Course
+      can :manage, Assignment
+      can [:create, :see_job_details], Job
     end
     can [:teach, :update, :peer_evaluation, :team_formation], Course, :faculty => {:id => user.id} #Useful for TAs.
+    can :update, Job, :supervisors => {:id => user.id}
 
 
     # The first argument to `can` is the action you are giving the user permission to do.

@@ -56,14 +56,14 @@
             <% end %>
             <% unless (team.email.blank? || team.updating_email) %>
                 <td>
-                  <a href='mailto:<%= h team.email %>' target='_top'><%= image_tag("/images/email.gif", :width => "12", :height => "9", :border => 0) %></a>
+                  <a href='mailto:<%= h team.email %>' target='_top'><%= image_tag("email.gif", :width => "12", :height => "9", :border => 0) %></a>
                 </td>
             <% else %>
                 <td> &nbsp; </td>
             <% end %>
             <% unless team.tigris_space.blank? %>
                 <td>
-                  <a href='<%= h team.tigris_space %>' target='_top'><%= image_tag("/images/tigris.gif", :width => "16", :height => "16", :border => 0) %></a>
+                  <a href='<%= h team.tigris_space %>' target='_top'><%= image_tag("tigris.gif", :width => "16", :height => "16", :border => 0) %></a>
                 </td>
             <% else %>
                 <td> &nbsp; </td>
@@ -73,12 +73,12 @@
                 <td><%= team.section %></td>
             <% end %>
             <% if team.primary_faculty %>
-                <td><%= twiki_user_link(team.primary_faculty.twiki_name, team.primary_faculty.human_name) %></td>
+                <td><%= link_to team.primary_faculty.human_name, person_path(team.primary_faculty.twiki_name) %></td>
             <% else %>
                 <td>&nbsp;</td>
             <% end %>
             <% if team.secondary_faculty %>
-                <td><%= twiki_user_link(team.secondary_faculty.twiki_name, team.secondary_faculty.human_name) %></td>
+                <td><%= link_to team.secondary_faculty.human_name, person_path(team.secondary_faculty.twiki_name) %></td>
             <% else %>
                 <td>&nbsp;</td>
             <% end %>
@@ -86,11 +86,11 @@
             <td>
               <% team.members.each do |user| %>
                   <% if show_student_photos %>
-                      <%= render :partial => 'people/twiki_photo_link', :locals => {:person => user} %>
+                      <%= render :partial => 'people/profile_photo', :locals => {:person => user} %>
                   <% else %>
-                      <%= twiki_user_link(user.twiki_name, user.human_name) %>
+                      <%= link_to user.human_name, person_path(user.twiki_name) %>
                   <% end %>
-                  <% if @show_teams_for_many_courses && user.is_adobe_connect_host %><%= image_tag("/images/connect.gif", :width => "16", :height => "16", :alt => "Adobe Connect Host") %>
+                  <% if @show_teams_for_many_courses && user.is_adobe_connect_host %><%= image_tag("connect.gif", :width => "16", :height => "16", :alt => "Adobe Connect Host") %>
                   <% end %>
               <% end %>
             </td>

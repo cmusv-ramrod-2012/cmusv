@@ -18,7 +18,6 @@ describe Course do
     end
   end
 
-
   context "custom finders" do
 
     specify { Course.should respond_to(:last_offering) }
@@ -217,43 +216,10 @@ describe Course do
       course = FactoryGirl.create(:course)
       new_course = course.copy_as_new_course
       new_course.save
-      new_course.faculty.should =~ course.faculty
+      new_course.faculty.should == course.faculty
     end
 
   end
-
-  #When modifying this test, please examine the same for team
-  context "when adding faculty to a course by providing their names as strings" do
-    before(:each) do
-      @course = FactoryGirl.build(:course)
-      @faculty_frank = FactoryGirl.build(:faculty_frank, :id => rand(100))
-      @faculty_fagan = FactoryGirl.build(:faculty_fagan, :id => rand(100) + 100)
-      User.stub(:find_by_human_name).with(@faculty_frank.human_name).and_return(@faculty_frank)
-      User.stub(:find_by_human_name).with(@faculty_fagan.human_name).and_return(@faculty_fagan)
-      User.stub(:find_by_human_name).with("Someone not in the system").and_return(nil)
-    end
-
-    it "validates that the people are in the system" do
-      @course.faculty_assignments_override = [@faculty_frank.human_name, @faculty_fagan.human_name]
-      @course.validate_faculty
-      @course.should be_valid
-    end
-
-    it "for people not in the system, it sets an error" do
-      @course.faculty_assignments_override = [@faculty_frank.human_name, "Someone not in the system", @faculty_fagan.human_name]
-      @course.validate_faculty
-      @course.should_not be_valid
-      @course.errors[:base].should include("Person Someone not in the system not found")
-    end
-
-    it "assigns them to the faculty association" do
-      @course.faculty_assignments_override = [@faculty_frank.human_name, @faculty_fagan.human_name]
-      @course.update_faculty
-      @course.faculty[0].should == @faculty_frank
-      @course.faculty[1].should == @faculty_fagan
-    end
-  end
-
 
   #context "Last offering" do
   #  it "shouldn't return a class that hasn't happened yet" do
@@ -328,6 +294,16 @@ describe Course do
     end
   end
 
+  context 'nomenclature assignment or deliverable' do
+    it "should display the preferred name of assignment" do
+      @course_fse = FactoryGirl.create(:fse)
+      @course_grading_rule = FactoryGirl.create(:grading_rule_points, :course_id=> @course_fse.id)
+      @course_fse.grading_rule = @course_grading_rule
+
+      @course_fse.nomenclature_assignment_or_deliverable.should eql("assignment")
+    end
+
+  end
 
 #these tests are the same with team
   context 'generated email address' do
@@ -397,6 +373,28 @@ describe Course do
     end
   end
 
+  it "email_faculty_to_configure_course sends an email" do
+    CourseMailer.should_receive(:configure_course_faculty_email).and_return(double(CourseMailer, :deliver => true))
+    course = FactoryGirl.build(:course)
+    course.email_faculty_to_configure_course_unless_already_configured
+  end
+
+  it "email_faculty_to_configure_course does not sends an email if course is already configured" do
+    CourseMailer.should_not_receive(:configure_course_faculty_email)
+    course = FactoryGirl.build(:course, :is_configured => true)
+    course.email_faculty_to_configure_course_unless_already_configured
+  end
+
+  it "registered_students_or_on_teams should list all students in a course" do
+    Course.any_instance.stub(:registered_students).and_return([
+        stub_model(User, :human_name => "student 1"),
+        stub_model(User, :human_name => "student 2")
+    ])
+    Course.any_instance.stub(:teams).and_return([
+        stub_model(Team, :members => [stub_model(User, :human_name => "student 3")] )
+    ])
+    subject.registered_students_or_on_teams.count.should == 3
+  end
 
   # Tests for has_and_belongs_to_many relationship
   it { should have_many(:faculty) }

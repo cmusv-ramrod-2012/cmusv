@@ -1,16 +1,13 @@
 "<%= @page_comment.comment %>"
-<% if !@page_comment.user_id.nil? %>
-    by <%= h User.find(@page_comment.user_id).human_name %>
+<% unless @page_comment.user.nil? %>
+    by <%= @page_comment.user.human_name %>
 <% end %>
 
-
-This comment was <%= @status %> on this page:
-<%= page_url(@page_comment.page) %>
-<%= link_to "Page", page_url(@page_comment.page) %>
+This comment was <%= @status %> on this <%= link_to "page", page_url(@page_comment.page) %>
 
 
 Patrolling the campus,
 Scotty Dog
 
-<%= image_tag("http://rails.sv.cmu.edu/images/ScottyDogLandscape.jpg", :class => "bevel", :size => "236x69", :alt => "Picture of Scotty Dog") %> 
+<%= image_tag("ScottyDogLandscape.jpg", :class => "bevel", :size => "236x69", :alt => "Picture of Scotty Dog") %>
 

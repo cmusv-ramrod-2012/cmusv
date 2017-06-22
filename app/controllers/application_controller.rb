@@ -49,16 +49,27 @@ class ApplicationController < ActionController::Base
     end
   end
 
-  # In development, if you want to pretend to be a different user, you can set it easily here
+##  In development, if you want to pretend to be a different user, you can set it easily here
   #def current_user
-  #  User.last
-  #end
+   # User.find_by_id 1 #Cecile
+    #User.last
+ # end
 
   def authenticate_user!
     if !current_user
       # This should work, but session is lost. See https://github.com/plataformatec/devise/issues/1357
       # session[:return_to] = request.fullpath
-      redirect_to user_omniauth_authorize_path(:google_apps, :origin => request.fullpath)
+      redirect_to user_omniauth_authorize_path(:google_oauth2, :origin => request.fullpath)
+    end
+  end
+
+  def user_profile_status_check
+    if !current_user.profile_updated?
+      if current_user.should_be_redirected?
+        redirect_to root_path
+      else
+        #popup a box
+      end
     end
   end
 

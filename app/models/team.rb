@@ -8,23 +8,28 @@ class Team < ActiveRecord::Base
 
   has_many :presentations
 
-  validate :validate_members
+  validate :validate_team_members
   validates_presence_of :course_id, :name
   validates_uniqueness_of :email, :allow_blank => true, :message => "The team name has already be used in this semester. Pick another name"
 
   attr :team_members_list_changed, true
-
-  #When assigning faculty to a page, the user types in a series of strings that then need to be processed
-  #:members_override is a temporary variable that is used to do validation of the strings (to verify
-  # that they are people in the system) and then to save the people in the faculty association.
-  attr_accessor :members_override
-
 
   before_validation :clean_up_data, :update_email_address
   before_save :copy_peer_evaluation_dates_from_course, :need_to_update_google_list?, :update_members
   after_save :update_mailing_list
 
   before_destroy :remove_google_group
+
+  #When assigning faculty to a page, the user types in a series of strings that then need to be processed
+  #:members_override is a temporary variable that is used to do validation of the strings (to verify
+  # that they are people in the system) and then to save the people in the faculty association.
+  attr_accessor :members_override
+
+  include PeopleInACollection
+
+  def validate_team_members
+    validate_members :members_override
+  end
 
   def clean_up_data
     self.name = self.name.strip() unless self.name.blank?
@@ -79,18 +84,6 @@ class Team < ActiveRecord::Base
 
   #When modifying validate_members or update_members, modify the same code in course.rb
   #Todo - move to a higher class or try as a mixin
-  def validate_members
-    return "" if members_override.nil?
-
-    self.members_override = members_override.select { |name| name != nil && name.strip != "" }
-    list = map_member_stings_to_users(members_override)
-    list.each_with_index do |id, index|
-      if id.nil?
-        self.errors.add(:base, "Person " + members_override[index] + " not found")
-      end
-    end
-  end
-
   def update_members
     return "" if members_override.nil?
 
@@ -98,7 +91,7 @@ class Team < ActiveRecord::Base
     #if the list has changed
     if (self.members_override.sort != self.members.collect { |person| person.human_name }.sort)
       self.updating_email = true
-      list = map_member_stings_to_users(self.members_override)
+      list = map_member_strings_to_users(self.members_override)
       raise "Error converting members_override to IDs!" if list.include?(nil)
       self.members = list
     end
@@ -108,7 +101,7 @@ class Team < ActiveRecord::Base
   def show_addresses_for_mailing_list
     begin
       @members = []
-      google_apps_connection.retrieve_all_members(self.google_group).each do |member|
+      GoogleWrapper.retrieve_all_members(self.google_group).each do |member|
         @members << member.member_id.sub('@west.cmu.edu', '@sv.cmu.edu')
       end
       return @members
@@ -141,23 +134,16 @@ class Team < ActiveRecord::Base
   end
 
   def peer_evaluation_message_one
-    return "Action Required: please do this peer evaluation survey\n\n by the end of " + self.peer_evaluation_second_email.to_date.to_formatted_s(:long)
+    return "Action Required: please do this peer evaluation survey\n\n by the end of " + self.course.peer_evaluation_second_email.to_date.to_formatted_s(:long)
 
-  end
-
-  def peer_evaluation_message_two_done
-    return "According to my records, you have finished the peer evaluation. If you wanted to make any last minute changes to it, do it today."
-  end
-
-  def peer_evaluation_message_two_incomplete
-    return "Action Required: please do this peer evaluation survey NOW. \n\n Today is your last day to do the peer evaluation."
   end
 
   def clone_to_another_course(destination_course_id)
+    destination_course = Course.find(destination_course_id)
     clone = self.clone
     clone.member_ids = self.member_ids
-    clone.course_id = destinaton_course_id
-    clone.name = self.name + " - " + destination_course_id
+    clone.course_id = destination_course_id
+    clone.name = self.name + " - " + destination_course.short_or_course_number
     clone.save
   end
 
@@ -171,13 +157,9 @@ class Team < ActiveRecord::Base
 
   def remove_google_group
     logger.debug "trying before_destroy"
-    google_apps_connection.delete_group(self.email)
+    GoogleWrapper.delete_group(self.email)
   rescue GDataError => e
     logger.error "Attempting to destroy group.  errorcode = #{e.code}, input : #{e.input}, reason : #{e.reason}"
-  end
-
-  def map_member_stings_to_users(members_override_list)
-    members_override_list.map { |member_name| User.find_by_human_name(member_name) }
   end
 
 end

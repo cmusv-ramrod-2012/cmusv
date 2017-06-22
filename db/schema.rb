@@ -1,3 +1,4 @@
+# encoding: UTF-8
 # This file is auto-generated from the current state of the database. Instead
 # of editing this file, please use the migrations feature of Active Record to
 # incrementally modify your database, and then regenerate this schema definition.
@@ -10,7 +11,23 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20120801031314) do
+ActiveRecord::Schema.define(:version => 20150705191831) do
+
+  create_table "assignments", :force => true do |t|
+    t.string   "name"
+    t.float    "maximum_score"
+    t.boolean  "is_team_deliverable", :default => false
+    t.datetime "due_date"
+    t.integer  "course_id"
+    t.integer  "assignment_order"
+    t.integer  "task_number"
+    t.boolean  "is_submittable",      :default => true
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.string   "short_name"
+  end
+
+  add_index "assignments", ["course_id"], :name => "index_assignments_on_course_id"
 
   create_table "course_numbers", :force => true do |t|
     t.string   "name"
@@ -34,29 +51,23 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
     t.boolean  "remind_about_effort"
     t.string   "short_name"
     t.integer  "year"
-    t.boolean  "configure_class_mailinglist",     :default => false
     t.date     "peer_evaluation_first_email"
     t.date     "peer_evaluation_second_email"
-    t.boolean  "configure_teams_name_themselves", :default => true
     t.string   "curriculum_url"
-    t.boolean  "configure_course_twiki",          :default => false
-    t.boolean  "is_configured",                   :default => false
+    t.boolean  "configure_course_twiki",       :default => false
+    t.boolean  "is_configured",                :default => false
     t.integer  "updated_by_user_id"
     t.integer  "configured_by_user_id"
     t.boolean  "updating_email"
     t.string   "email"
   end
 
+  add_index "courses", ["course_number_id"], :name => "index_courses_on_course_number_id"
   add_index "courses", ["mini"], :name => "index_courses_on_mini"
   add_index "courses", ["number"], :name => "index_courses_on_number"
   add_index "courses", ["semester"], :name => "index_courses_on_semester"
   add_index "courses", ["twiki_url"], :name => "index_courses_on_twiki_url"
   add_index "courses", ["year"], :name => "index_courses_on_year"
-
-  create_table "courses_users", :id => false, :force => true do |t|
-    t.integer "course_id"
-    t.integer "user_id"
-  end
 
   create_table "curriculum_comment_types", :force => true do |t|
     t.string   "name"
@@ -78,8 +89,10 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
     t.boolean  "notify_me"
   end
 
+  add_index "curriculum_comments", ["curriculum_comment_type_id"], :name => "index_curriculum_comments_on_curriculum_comment_type_id"
   add_index "curriculum_comments", ["semester"], :name => "index_curriculum_comments_on_semester"
   add_index "curriculum_comments", ["url"], :name => "index_curriculum_comments_on_url"
+  add_index "curriculum_comments", ["user_id"], :name => "index_curriculum_comments_on_user_id"
   add_index "curriculum_comments", ["year"], :name => "index_curriculum_comments_on_year"
 
   create_table "delayed_jobs", :force => true do |t|
@@ -103,7 +116,10 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
     t.string   "attachment_content_type"
     t.integer  "attachment_file_size"
     t.text     "comment"
+    t.text     "stored_filename"
   end
+
+  add_index "deliverable_attachment_versions", ["deliverable_id"], :name => "index_deliverable_attachment_versions_on_deliverable_id"
 
   create_table "deliverables", :force => true do |t|
     t.text     "name"
@@ -118,7 +134,17 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
     t.string   "feedback_content_type"
     t.integer  "feedback_file_size"
     t.datetime "feedback_updated_at"
+    t.integer  "assignment_id"
+    t.text     "private_note"
+    t.string   "grade_status",          :default => "ungraded"
   end
+
+  add_index "deliverables", ["assignment_id"], :name => "index_deliverables_on_assignment_id"
+  add_index "deliverables", ["course_id", "creator_id", "assignment_id"], :name => "index_deliverables_on_course_id_and_creator_id_and_assgnmnt_id"
+  add_index "deliverables", ["course_id", "team_id", "assignment_id"], :name => "index_deliverables_on_course_id_and_team_id_and_assignment_id"
+  add_index "deliverables", ["course_id"], :name => "index_deliverables_on_course_id"
+  add_index "deliverables", ["creator_id"], :name => "index_deliverables_on_creator_id"
+  add_index "deliverables", ["team_id"], :name => "index_deliverables_on_team_id"
 
   create_table "effort_log_line_items", :force => true do |t|
     t.integer  "effort_log_id"
@@ -137,7 +163,9 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
     t.integer  "position"
   end
 
+  add_index "effort_log_line_items", ["course_id"], :name => "index_effort_log_line_items_on_course_id"
   add_index "effort_log_line_items", ["effort_log_id"], :name => "index_effort_log_line_items_on_effort_log_id"
+  add_index "effort_log_line_items", ["task_type_id"], :name => "index_effort_log_line_items_on_task_type_id"
 
   create_table "effort_logs", :force => true do |t|
     t.integer  "user_id"
@@ -160,31 +188,78 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
 
   add_index "faculty_assignments", ["course_id", "user_id"], :name => "index_courses_people_on_course_id_and_person_id", :unique => true
   add_index "faculty_assignments", ["course_id", "user_id"], :name => "index_faculty_assignments_on_course_id_and_person_id", :unique => true
+  add_index "faculty_assignments", ["course_id"], :name => "index_faculty_assignments_on_course_id"
 
-  create_table "individual_contribution_for_courses", :force => true do |t|
-    t.integer "individual_contribution_id"
-    t.integer "course_id"
-    t.text    "answer1"
-    t.float   "answer2"
-    t.text    "answer3"
-    t.text    "answer4"
-    t.text    "answer5"
+  create_table "grades", :force => true do |t|
+    t.integer  "course_id"
+    t.integer  "student_id"
+    t.integer  "assignment_id"
+    t.text     "score"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.boolean  "is_student_visible"
+    t.integer  "last_graded_by"
   end
 
-  add_index "individual_contribution_for_courses", ["course_id"], :name => "index_individual_contribution_for_courses_on_course_id"
-  add_index "individual_contribution_for_courses", ["individual_contribution_id"], :name => "individual_contribution_for_courses_icid"
+  add_index "grades", ["assignment_id"], :name => "index_grades_on_assignment_id"
+  add_index "grades", ["course_id", "student_id", "assignment_id"], :name => "index_grades_on_course_id_and_student_id_and_assignment_id"
+  add_index "grades", ["course_id"], :name => "index_grades_on_course_id"
+  add_index "grades", ["student_id"], :name => "index_grades_on_student_id"
 
-  create_table "individual_contributions", :force => true do |t|
+  create_table "grading_rules", :force => true do |t|
+    t.string   "grade_type"
+    t.float    "A_grade_min",                 :default => 94.0
+    t.float    "A_minus_grade_min",           :default => 90.0
+    t.float    "B_plus_grade_min",            :default => 87.0
+    t.float    "B_grade_min",                 :default => 83.0
+    t.float    "B_minus_grade_min",           :default => 80.0
+    t.float    "C_plus_grade_min",            :default => 78.0
+    t.float    "C_grade_min",                 :default => 74.0
+    t.float    "C_minus_grade_min",           :default => 70.0
+    t.integer  "course_id"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.boolean  "is_nomenclature_deliverable"
+  end
+
+  add_index "grading_rules", ["course_id"], :name => "index_grading_rules_on_course_id"
+
+  create_table "job_employees", :force => true do |t|
+    t.integer  "job_id"
     t.integer  "user_id"
-    t.integer  "year"
-    t.integer  "week_number"
     t.datetime "created_at"
     t.datetime "updated_at"
   end
 
-  add_index "individual_contributions", ["user_id"], :name => "index_individual_contributions_on_user_id"
-  add_index "individual_contributions", ["week_number"], :name => "index_individual_contributions_on_week_number"
-  add_index "individual_contributions", ["year"], :name => "index_individual_contributions_on_year"
+  add_index "job_employees", ["job_id"], :name => "index_job_employees_on_job_id"
+  add_index "job_employees", ["user_id"], :name => "index_job_employees_on_user_id"
+
+  create_table "job_supervisors", :force => true do |t|
+    t.integer  "job_id"
+    t.integer  "user_id"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "job_supervisors", ["job_id"], :name => "index_job_supervisors_on_job_id"
+  add_index "job_supervisors", ["user_id"], :name => "index_job_supervisors_on_user_id"
+
+  create_table "jobs", :force => true do |t|
+    t.string   "title"
+    t.text     "description"
+    t.string   "skills_must_haves"
+    t.string   "skills_nice_haves"
+    t.string   "duration"
+    t.string   "sponsored_project_id"
+    t.text     "funding_description"
+    t.boolean  "is_accepting",         :default => true
+    t.boolean  "is_closed",            :default => false
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.text     "log"
+  end
+
+  add_index "jobs", ["sponsored_project_id"], :name => "index_jobs_on_sponsored_project_id"
 
   create_table "page_attachments", :force => true do |t|
     t.integer  "page_id"
@@ -201,6 +276,7 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
   add_index "page_attachments", ["is_active"], :name => "index_page_attachments_on_is_active"
   add_index "page_attachments", ["page_id"], :name => "index_page_attachments_on_page_id"
   add_index "page_attachments", ["position"], :name => "index_page_attachments_on_position"
+  add_index "page_attachments", ["user_id"], :name => "index_page_attachments_on_user_id"
 
   create_table "page_comment_types", :force => true do |t|
     t.string   "name"
@@ -222,6 +298,7 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
     t.datetime "updated_at"
   end
 
+  add_index "page_comments", ["page_comment_type_id"], :name => "index_page_comments_on_page_comment_type_id"
   add_index "page_comments", ["page_id"], :name => "index_page_comments_on_page_id"
   add_index "page_comments", ["semester"], :name => "index_page_comments_on_semester"
   add_index "page_comments", ["user_id"], :name => "index_page_comments_on_user_id"
@@ -248,9 +325,12 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
     t.integer  "version"
     t.string   "version_comments"
     t.string   "url"
-    t.boolean  "is_editable_by_all",     :default => false
-    t.boolean  "is_duplicated_page",     :default => false
-    t.boolean  "is_viewable_by_all",     :default => true
+    t.boolean  "is_editable_by_all",      :default => false
+    t.boolean  "is_duplicated_page",      :default => false
+    t.integer  "current_edit_by_user_id"
+    t.datetime "current_edit_started_at"
+    t.string   "viewable_by",             :default => "users"
+    t.boolean  "visible",                 :default => true
   end
 
   add_index "pages", ["course_id"], :name => "index_pages_on_course_id"
@@ -260,7 +340,7 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
   create_table "peer_evaluation_learning_objectives", :force => true do |t|
     t.integer  "user_id"
     t.integer  "team_id"
-    t.string   "learning_objective"
+    t.text     "learning_objective"
     t.datetime "created_at"
     t.datetime "updated_at"
   end
@@ -294,6 +374,17 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
   add_index "peer_evaluation_reviews", ["author_id"], :name => "index_peer_evaluation_reviews_on_author_id"
   add_index "peer_evaluation_reviews", ["recipient_id"], :name => "index_peer_evaluation_reviews_on_recipient_id"
   add_index "peer_evaluation_reviews", ["team_id"], :name => "index_peer_evaluation_reviews_on_team_id"
+
+  create_table "people_search_defaults", :force => true do |t|
+    t.integer  "user_id"
+    t.string   "student_staff_group"
+    t.string   "program_group"
+    t.string   "track_group"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "people_search_defaults", ["user_id"], :name => "index_people_search_defaults_on_user_id"
 
   create_table "presentation_feedback_answers", :force => true do |t|
     t.integer  "feedback_id"
@@ -339,26 +430,8 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
 
   add_index "presentations", ["course_id"], :name => "index_presentations_on_course_id"
   add_index "presentations", ["presentation_date"], :name => "index_presentations_on_presentation_date"
-
-  create_table "project_types", :force => true do |t|
-    t.string   "name"
-    t.string   "description"
-    t.datetime "created_at"
-    t.datetime "updated_at"
-  end
-
-  add_index "project_types", ["name"], :name => "index_project_types_on_name"
-
-  create_table "projects", :force => true do |t|
-    t.string   "name"
-    t.integer  "project_type_id"
-    t.integer  "course_id"
-    t.boolean  "is_closed"
-    t.datetime "created_at"
-    t.datetime "updated_at"
-  end
-
-  add_index "projects", ["name"], :name => "index_projects_on_name"
+  add_index "presentations", ["team_id"], :name => "index_presentations_on_team_id"
+  add_index "presentations", ["user_id"], :name => "index_presentations_on_user_id"
 
   create_table "registrations", :id => false, :force => true do |t|
     t.integer  "course_id",  :null => false
@@ -438,14 +511,6 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
   add_index "sponsored_projects", ["name"], :name => "index_sponsored_projects_on_name"
   add_index "sponsored_projects", ["sponsor_id"], :name => "index_sponsored_projects_on_sponsor_id"
 
-  create_table "strength_themes", :force => true do |t|
-    t.string   "theme"
-    t.string   "brief_description"
-    t.text     "long_description"
-    t.datetime "created_at"
-    t.datetime "updated_at"
-  end
-
   create_table "suggestions", :force => true do |t|
     t.integer  "user_id"
     t.text     "comment"
@@ -493,6 +558,8 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
   end
 
   add_index "teams", ["course_id"], :name => "index_teams_on_course_id"
+  add_index "teams", ["primary_faculty_id"], :name => "index_teams_on_primary_faculty_id"
+  add_index "teams", ["secondary_faculty_id"], :name => "index_teams_on_secondary_faculty_id"
 
   create_table "user_versions", :force => true do |t|
     t.integer  "user_id"
@@ -551,11 +618,6 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
     t.string   "current_sign_in_ip"
     t.string   "last_sign_in_ip"
     t.datetime "yammer_created"
-    t.integer  "strength1_id"
-    t.integer  "strength2_id"
-    t.integer  "strength3_id"
-    t.integer  "strength4_id"
-    t.integer  "strength5_id"
     t.datetime "sponsored_project_effort_last_emailed"
     t.string   "photo_file_name"
     t.string   "photo_content_type"
@@ -565,7 +627,31 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
     t.datetime "remember_created_at"
     t.date     "expires_at"
     t.string   "course_index_view"
+    t.string   "linked_in"
+    t.string   "facebook"
+    t.string   "twitter"
+    t.string   "google_plus"
+    t.datetime "people_search_first_accessed_at"
+    t.boolean  "is_profile_valid"
+    t.string   "image_uri_first"
+    t.string   "image_uri_second"
+    t.string   "image_uri_custom"
+    t.string   "photo_first_file_name"
+    t.string   "photo_first_content_type"
+    t.string   "photo_second_file_name"
+    t.string   "photo_second_content_type"
+    t.string   "photo_custom_file_name"
+    t.string   "photo_custom_content_type"
+    t.string   "photo_selection"
+    t.datetime "active_directory_account_created_at"
+    t.string   "new_user_token"
+    t.string   "password_reset_token"
+    t.datetime "password_reset_sent_at"
+    t.boolean  "is_ga_promised"
+    t.string   "org_unit_path"
   end
+
+  add_index "user_versions", ["user_id"], :name => "index_user_versions_on_user_id"
 
   create_table "users", :force => true do |t|
     t.string   "webiso_account"
@@ -617,17 +703,12 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
     t.datetime "twiki_created"
     t.datetime "adobe_created"
     t.datetime "msdnaa_created"
-    t.integer  "sign_in_count",                                        :default => 0,     :null => false
+    t.integer  "sign_in_count",                                        :default => 0,                    :null => false
     t.datetime "current_sign_in_at"
     t.datetime "last_sign_in_at"
     t.string   "current_sign_in_ip"
     t.string   "last_sign_in_ip"
     t.datetime "yammer_created"
-    t.integer  "strength1_id"
-    t.integer  "strength2_id"
-    t.integer  "strength3_id"
-    t.integer  "strength4_id"
-    t.integer  "strength5_id"
     t.datetime "sponsored_project_effort_last_emailed"
     t.string   "photo_file_name"
     t.string   "photo_content_type"
@@ -637,6 +718,28 @@ ActiveRecord::Schema.define(:version => 20120801031314) do
     t.datetime "remember_created_at"
     t.date     "expires_at"
     t.string   "course_index_view"
+    t.string   "linked_in"
+    t.string   "facebook"
+    t.string   "twitter"
+    t.string   "google_plus"
+    t.datetime "people_search_first_accessed_at"
+    t.boolean  "is_profile_valid"
+    t.string   "image_uri_first",                                      :default => "/images/mascot.jpg"
+    t.string   "image_uri_second",                                     :default => "/images/mascot.jpg"
+    t.string   "image_uri_custom",                                     :default => "/images/mascot.jpg"
+    t.string   "photo_first_file_name"
+    t.string   "photo_first_content_type"
+    t.string   "photo_second_file_name"
+    t.string   "photo_second_content_type"
+    t.string   "photo_custom_file_name"
+    t.string   "photo_custom_content_type"
+    t.string   "photo_selection"
+    t.datetime "active_directory_account_created_at"
+    t.string   "new_user_token"
+    t.string   "password_reset_token"
+    t.datetime "password_reset_sent_at"
+    t.boolean  "is_ga_promised"
+    t.string   "org_unit_path"
   end
 
   add_index "users", ["email"], :name => "index_users_on_email"

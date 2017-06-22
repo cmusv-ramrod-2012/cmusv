@@ -28,7 +28,7 @@
     </div>
 <% end %>
 
-<%= javascript_include_tag 'jquery.cookie' %>
+<%= javascript_include_tag 'jquery_cookie' %>
 
 <script type="text/javascript">
     function cleanup_filename(path) {
@@ -53,13 +53,12 @@
     });
 
     $(document).ready(function () {
-
         //Attach event to tab selection & save selected tab in cookie
-        $('#tabs').bind('tabsselect', function (event, tab) {
-            $.cookie('selected_tab', tab.index);
+        $('#tabs').on('click', "a", function(event) {
+            tab_id = Number($(this).attr("href").split("-").pop())-1;
+            $.cookie('selected_tab', tab_id);
         });
-
-        $("#tabs").tabs().tabs('select', parseInt($.cookie('selected_tab')));
+        $("#tabs").tabs({ active: parseInt($.cookie('selected_tab'), 10) });
     });
 
 </script>
@@ -68,14 +67,14 @@
     //<![CDATA[
     $(document).ready(function () {
         var url = location.pathname;
-        if (url.indexOf("intro_to_se") != -1) {
+        if ((url.indexOf("intro_to_se") != -1) || (url.indexOf("ise") != -1)) {
             $(".courseTitle").text("Introduction to Software Engineering");
             $(".taskHeaderDiv").text("Introduction to Software Engineering");
             document.title = "Introduction to Software Engineering";
             $(".title").text("Introduction to Software Engineering");
             $(".foundations").hide();
         }
-        if (url.indexOf("foundations") != -1) {
+        if ((url.indexOf("foundations") != -1)|| (url.indexOf("fse") != -1)) {
             $(".intro_se").hide();
         }
     });
@@ -93,7 +92,7 @@
         <li><a href="#tabs-1">Project Requirements</a></li>
         <li><a href="#tabs-2">Getting help</a></li>
         <li><a href="#tabs-3">Submitting your work</a></li>
-        <% if current_user.is_staff || current_user.is_admin %>
+        <% if current_user.present? && (current_user.is_staff || current_user.is_admin) %>
             <li><a href="#tabs-4">Faculty notes</a></li>
         <% end %>
       </ul>
@@ -119,10 +118,9 @@
 
         <p><%= sanitize_trusted(@page.tab_three_contents) %></p>
       </div>
-      <% if current_user.is_staff || current_user.is_admin %>
+      <% if current_user.present? && (current_user.is_staff || current_user.is_admin) %>
           <div id="tabs-4">
             <p>Students can not see the contents of this tab. Students do not see a Faculty Notes tab.</p>
-
             <p><%= sanitize_trusted(@page.faculty_notes) %></p>
           </div>
       <% end %>
@@ -282,5 +280,8 @@
 
 <% if @page.editable?(current_user) %>
     <%= link_to 'Edit', edit_page_path(@page) %> |
+    <% if params[:version] %>
+    	<%= link_to "Revert to this version", revert_page_path(:version => params[:version]), :method => "post" %> |
+    <% end %>
 <% end %>
 <%= link_to 'Back', pages_path %> <br/>

@@ -53,7 +53,7 @@ class TeamsController < ApplicationController
   # generate the team table for a course on a page hosted on the twiki server
   def twiki_index
     @show_teams_for_many_courses = false
-    @machine_name = "http://rails.sv.cmu.edu"
+    @machine_name = "http://whiteboard.sv.cmu.edu"
 
     url = get_twiki_http_referer()
     @course = Course.where(:twiki_url => url).first
@@ -181,7 +181,7 @@ class TeamsController < ApplicationController
   # POST /courses/1/teams.xml
   def create
     if has_permissions_or_redirect(:staff, root_path)
-      params[:team][:members_override] = params[:people]
+      params[:team][:members_override] = params[:persons]
       @team = Team.new(params[:team])
 
       @team.course_id = params[:course_id]
@@ -206,7 +206,7 @@ class TeamsController < ApplicationController
   # PUT /courses/1/teams/1
   # PUT /courses/1/teams/1.xml
   def update
-    params[:team][:members_override] = params[:people]
+    params[:team][:members_override] = params[:persons]
     @team = Team.find(params[:id])
     @course = @team.course
     if has_permissions_or_redirect(:staff, course_team_path(@course, @team))

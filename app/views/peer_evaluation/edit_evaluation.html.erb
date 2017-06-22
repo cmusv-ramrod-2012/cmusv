@@ -1,4 +1,61 @@
+<%= stylesheet_link_tag "alertify.core.css", media: "all" %>
+<%= stylesheet_link_tag "alertify.default.css", media: "all" %>
+
+<%= javascript_include_tag "ajax-error.js" %>
+<%= javascript_include_tag "alertify_min.js" %>
+
 <% content_for :title, 'Peer evaluation for ' + @team.name %>
+<% content_for :javascript do %>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            // If a reviewer has updated the form on evaluation page, "isUpdated" will be set to true.
+            // Every time after an ajax save operation has been made, "isUpdated" will be set to false.
+            var isUpdated = false;
+
+            // The timer of checking if evaluation page is "dirty". Timer function will be triggered every
+            // 10 seconds. If evaluation page has been updated since previous ajax save, the new evaluation
+            // data will be saved again.
+            setInterval(function () {
+                if (isUpdated) {
+                    $.ajax({
+                        type:'post',
+                        dataType:'json',
+                        data:$('#new_peer_evaluation_review').serialize(),
+                        timeout: 8000,
+                        url:"/peer_evaluation/complete_evaluation",
+                        success:function (data) {
+                            if (data.code == "failed") {
+                                showAjaxError(data.message);
+                            }
+                        },
+                        error:function (x, t, m) {
+                            // ignore timeout error
+                            if ("timeout" != t) {
+                                if(m) {
+                                   showAjaxError(m);
+                                } else {
+                                   showAjaxError("Unable to auto-save. Perhaps the server is down.");
+                                }
+                            }
+                        },
+                        complete:function (data) {
+                            isUpdated = false;
+                        }
+                    });
+                }
+            }, 10000);
+
+            $("#new_peer_evaluation_review").on('keydown', 'textarea', function(){
+                isUpdated = true;
+            });
+
+            alertify.log("Auto save is enabled. We'll save your changes every 10 seconds");
+
+        });
+
+    </script>
+
+<% end %>
 <script type="text/javascript">
     var confirmation_needed = true;
     window.onbeforeunload = confirmExit;
@@ -70,11 +127,9 @@
     <% @users.each do |member| %>
         <p><%= member.human_name %></p>
         <% if @on_team %>
-            <input type="text" name="allocations[
-              <% membercounter %>]" value="<%= @point_allocations[member.human_name] %>"><br/>
+            <input type="text" name="allocations[<%= membercounter %>]" value="<%= @point_allocations[member.human_name] %>"><br/>
         <% else %>
-            <input type="text" disabled name="allocations[
-              <% membercounter %>]" value="<%= @point_allocations[member.human_name] %>"><br/>
+            <input type="text" disabled name="allocations[<%= membercounter %>]" value="<%= @point_allocations[member.human_name] %>"><br/>
         <% end %>
         <% membercounter += 1 %>
     <% end %>

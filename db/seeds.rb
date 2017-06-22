@@ -4,62 +4,31 @@
 # Examples:
 #
 #   cities = City.create([{ :name => 'Chicago' }, { :name => 'Copenhagen' }])
-#   Mayor.create(:name => 'Daley', :city => cities.first)             
+#   Mayor.create(:name => 'Daley', :city => cities.first)
 
 
 require 'factory_girl'
-
-Factory.create(:achiever)
-Factory.create(:activator)
-Factory.create(:adaptability)
-Factory.create(:analytical)
-Factory.create(:arranger)
-Factory.create(:belief)
-Factory.create(:command)
-Factory.create(:communication)
-Factory.create(:competition)
-Factory.create(:connectedness)
-Factory.create(:consistency)
-Factory.create(:context)
-Factory.create(:deliberative)
-Factory.create(:developer)
-Factory.create(:discipline)
-Factory.create(:empathy)
-Factory.create(:focus)
-Factory.create(:futuristic)
-Factory.create(:harmony)
-Factory.create(:ideation)
-Factory.create(:includer)
-Factory.create(:individualization)
-Factory.create(:input)
-Factory.create(:intellection)
-Factory.create(:learner)
-Factory.create(:maximizer)
-Factory.create(:positivity)
-Factory.create(:relator)
-Factory.create(:responsibility)
-Factory.create(:restorative)
-Factory.create(:self_assurance)
-Factory.create(:significance)
-Factory.create(:strategic)
-Factory.create(:woo)
 
 FactoryGirl.define do
   factory :todd, :parent => :person do
     first_name "Todd"
     last_name "Sedano"
+    twiki_name "ToddSedano"
     human_name "Todd Sedano"
     email "todd.sedano@sv.cmu.edu"
     is_staff 1
+    image_uri "/images/staff/ToddSedano.jpg"
   end
 
 
   factory :ed, :parent => :person do
     first_name "Ed"
     last_name "Katz"
+    twiki_name "EdKatz"
     human_name "Ed Katz"
     email "ed.katz@sv.cmu.edu"
     is_staff 1
+    image_uri "/images/staff/EdKatz.jpg"
   end
 
   factory :awe_smith, :parent => :person do
@@ -111,16 +80,6 @@ FactoryGirl.define do
 
   sleep(0.02)
 
-#factory :architecture, :class => Course do |c|
-# c.name "Architecture"
-# c.number "96-705"
-# c.semester "Summer"
-# c.mini "Both"
-# c.year "2008"
-#end
-
-  sleep(0.02)
-
   factory :team_terrific, :class => Team do
     name "Team Terrific"
     email "terrific@sv.cmu.edu"
@@ -136,8 +95,8 @@ FactoryGirl.define do
       FactoryGirl.create(:betty_ross, teams:[team])
       FactoryGirl.create(:charlie_moss, teams:[team])
     }
-
   end
+
 
   factory :your_name_here, :parent => :person do
     is_student 1
@@ -166,8 +125,9 @@ ed = Factory.create(:ed)
 Factory.create(:your_name_here)
 Factory.create(:team_terrific) #This will create awe_smith, betty_ross, and charlie_moss
 
+FactoryGirl.create(:presentation_feedback_questions, :label => "Content", :text => "Did the talk cover all the content suggested on the checklist? (ie goals, progress, and the process for achieving the goals, outcomes)")
+FactoryGirl.create(:presentation_feedback_questions, :label => "Organization", :text => "How logical was the organization? How smooth were transactions between points and parts of the talk?  Was the talk focused? To the point?  Were the main points clearly stated? easy to find?")
+FactoryGirl.create(:presentation_feedback_questions, :label => "Visuals", :text => "Were they well-designed? Were all of them readable? Were they helpful? Were they manipulated well?")
+FactoryGirl.create(:presentation_feedback_questions, :label => "Delivery", :text => "Bodily delivery: (eye-contact, gestures, energy)    Vocal delivery: (loudness, rate, articulation) Question handling (poise, tact, team support; did the team answer the question asked?)")
 
-Factory.create(:presentation_feedback_questions, :label => "Content", :text => "Did the talk cover all the content suggested on the checklist? (ie goals, progress, and the process for achieving the goals, outcomes)")
-Factory.create(:presentation_feedback_questions, :label => "Organization", :text => "How logical was the organization? How smooth were transactions between points and parts of the talk?  Was the talk focused? To the point?  Were the main points clearly stated? easy to find?")
-Factory.create(:presentation_feedback_questions, :label => "Visuals", :text => "Were they well-designed? Were all of them readable? Were they helpful? Were they manipulated well?")
-Factory.create(:presentation_feedback_questions, :label => "Delivery", :text => "Bodily delivery: (eye-contact, gestures, energy)    Vocal delivery: (loudness, rate, articulation) Question handling (poise, tact, team support; did the team answer the question asked?)")
+

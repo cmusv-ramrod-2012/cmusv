@@ -1,7 +1,7 @@
 class PersonMailer < ActionMailer::Base
   default :from => 'CMU-SV Official Communication <help@sv.cmu.edu>',
           :cc => 'help@sv.cmu.edu',
-          :bcc => 'todd.sedano@sv.cmu.edu',
+          :bcc => 'rails.app@sv.cmu.edu',
           :subject => 'Welcome to Carnegie Mellon University Silicon Valley'
 
   def welcome_email(person, password, options = {})
@@ -9,8 +9,7 @@ class PersonMailer < ActionMailer::Base
     @password = password
 
     mail(:to => [@person.email, @person.webiso_account, @person.personal_email],
-         :subject => options[:subject] || "Welcome to Carnegie Mellon University Silicon Valley (" + @person.email + ")",
+         :subject => options[:subject] || 'Welcome to Carnegie Mellon University Silicon Valley (' + @person.email + ')',
          :date => Time.now)
   end
-
 end

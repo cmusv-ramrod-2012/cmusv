@@ -1,4 +1,5 @@
-require 'openid/store/filesystem'
+GOOGLE_CLIENT_ID = ENV['WHITEBOARD_GOOGLE_CLIENT_ID'] || "account@sandbox.sv.cmu.edu"
+GOOGLE_CLIENT_SECRET = ENV['WHITEBOARD_GOOGLE_CLIENT_SECRET'] || "password"
 
 # Use this hook to configure devise mailer, warden hooks and so forth. The first
 # four configuration values can also be set straight in your models.
@@ -99,7 +100,7 @@ Devise.setup do |config|
 
   # If true, uses the password salt as remember token. This should be turned
   # to false if you are not using database authenticatable.
-  config.use_salt_as_remember_token = false
+  #config.use_salt_as_remember_token = false
 
   # Options to be passed to the created cookie. For instance, you can set
   # :secure => true in order to force SSL only cookies.
@@ -203,7 +204,9 @@ Devise.setup do |config|
   # Add a new OmniAuth provider. Check the wiki for more information on setting
   # up on your models and hooks.
   # config.omniauth :github, 'APP_ID', 'APP_SECRET', :scope => 'user,public_repo'
-  config.omniauth :google_apps, OpenID::Store::Filesystem.new('./tmp'), :domain => 'west.cmu.edu'
+  # config.omniauth :google_apps, :store => OpenID::Store::Filesystem.new('./tmp'), :domain => 'west.cmu.edu'
+  # config.omniauth :google_oauth2, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, {client_options: {ssl: {ca_file: Rails.root.join("cacert.pem").to_s}}}
+  config.omniauth :google_oauth2, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, {}
 
   # ==> Warden configuration
   # If you want to use other strategies, that are not supported by Devise, or

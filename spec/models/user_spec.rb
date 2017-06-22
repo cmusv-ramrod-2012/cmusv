@@ -9,6 +9,7 @@ describe User do
     @faculty_frank = FactoryGirl.create(:faculty_frank)
     @faculty_fagan = FactoryGirl.create(:faculty_fagan)
     @admin_andy = FactoryGirl.create(:admin_andy)
+
   end
 
   describe "abilities" do
@@ -24,6 +25,22 @@ describe User do
       it{ should be_able_to(:manage, SponsoredProject.new) }
     end
   end
+
+  describe 'list of user related information' do
+
+    before do
+      @student_sam = FactoryGirl.create(:student_sam, :graduation_year=>"2012", :masters_program=>"SE")
+    end
+
+    it 'should get list of all graduation years available in the database'  do
+      User.get_all_years.should include("2012")
+    end
+    it 'should get list of all programs available in the database' do
+      User.get_all_programs.should include("SE")
+    end
+
+  end
+
 
 
 
@@ -44,23 +61,62 @@ describe User do
       @student_sam = FactoryGirl.create(:student_sam)
     end
 
-
-      it "accepts PNG files" do
-        @student_sam.photo = File.new(File.join(Rails.root, 'spec', 'fixtures', 'sample_photo.png'))
+      it "accepts PNG files for the first photo" do
+        @student_sam.photo_first = File.new(File.join(Rails.root, 'spec', 'fixtures', 'sample_photo.png'))
         @student_sam.should be_valid
       end
 
-      it "accepts GIF files" do
-        @student_sam.photo = File.new(File.join(Rails.root, 'spec', 'fixtures', "sample_photo.gif"))
+      it "accepts GIF files for the first photo" do
+        @student_sam.photo_first = File.new(File.join(Rails.root, 'spec', 'fixtures', "sample_photo.gif"))
         @student_sam.should be_valid
       end
 
-      it "should update image_uri after photo is uploaded", :skip_on_build_machine => true do
-        @student_sam.photo = File.new(File.join(Rails.root, 'spec', 'fixtures', "sample_photo.jpg"))
+      it "should update image_uri after photo_first is uploaded if the selection is the first one", :skip_on_build_machine => true do
+        @student_sam.photo_first = File.new(File.join(Rails.root, 'spec', 'fixtures', "sample_photo.jpg"))
+        @student_sam.photo_selection = "first"
         @student_sam.save!
-        @student_sam.image_uri.should eql(@student_sam.photo.url(:profile).split('?')[0])
+        @student_sam.image_uri.should eql(@student_sam.photo_first.url(:profile).split('?')[0])
       end
 
+      it "accepts PNG files for the second photo" do
+        @student_sam.photo_second = File.new(File.join(Rails.root, 'spec', 'fixtures', 'sample_photo.png'))
+        @student_sam.should be_valid
+      end
+
+      it "accepts GIF files for the second photo" do
+        @student_sam.photo_second = File.new(File.join(Rails.root, 'spec', 'fixtures', "sample_photo.gif"))
+        @student_sam.should be_valid
+      end
+
+      it "should update image_uri after photo_first is uploaded if the selection is the second one", :skip_on_build_machine => true do
+        @student_sam.photo_second = File.new(File.join(Rails.root, 'spec', 'fixtures', "sample_photo.jpg"))
+        @student_sam.photo_selection = "second"
+        @student_sam.save!
+        @student_sam.image_uri.should eql(@student_sam.photo_second.url(:profile).split('?')[0])
+      end
+
+      it "accepts PNG files for the custom photo" do
+        @student_sam.photo_custom = File.new(File.join(Rails.root, 'spec', 'fixtures', 'sample_photo.png'))
+        @student_sam.should be_valid
+      end
+
+      it "accepts GIF files for the custom photo" do
+        @student_sam.photo_custom = File.new(File.join(Rails.root, 'spec', 'fixtures', "sample_photo.gif"))
+        @student_sam.should be_valid
+      end
+
+      it "should update image_uri after photo_first is uploaded if the selection is the custom one", :skip_on_build_machine => true do
+        @student_sam.photo_custom = File.new(File.join(Rails.root, 'spec', 'fixtures', "sample_photo.jpg"))
+        @student_sam.photo_selection = "custom"
+        @student_sam.save!
+        @student_sam.image_uri.should eql(@student_sam.photo_custom.url(:profile).split('?')[0])
+      end
+
+      it "should update image_uri after photo_first is uploaded if the selection is the custom one", :skip_on_build_machine => true do
+        @student_sam.photo_selection = "anonymous"
+        @student_sam.save!
+        @student_sam.image_uri.should eql("/assets/mascot.jpg")
+      end
   end
 
   context "webiso account" do
@@ -98,16 +154,6 @@ describe User do
     end
 
 
-    it "should allow for StrengthFinder/StrengthQuest themes" do
-      subject.should respond_to(:strength1)
-      subject.should respond_to(:strength2)
-      subject.should respond_to(:strength3)
-      subject.should respond_to(:strength4)
-      subject.should respond_to(:strength5)
-
-      user = FactoryGirl.build(:strength_quest)
-      user.strength1.theme.should be_kind_of(String)
-    end
 
     describe "permission levels" do
       before(:each) do
@@ -233,7 +279,7 @@ describe User do
         @student_sam = FactoryGirl.create(:student_sam)
       end
 
-      it " is successful" do
+      it " is successful", :skip_on_build_machine => true  do
         ProvisioningApi.any_instance.stub(:create_user).and_return(:some_value)
         password = "just4now"
         @student_sam.email = "student.sam@sandbox.sv.cmu.edu"
@@ -272,9 +318,94 @@ describe User do
 
   end
 
+  context "should check if profile is valid" do
+    before(:each) do
+      @student_sam = FactoryGirl.build(:student_sam, is_active: true)
+    end
+    it "- profile should be invalid if bio/social profile and telephone number fields are missing" do
+      @student_sam.send(:update_is_profile_valid)  
+      @student_sam.is_profile_valid.should == false
+    end
+    it "- profile should valid if biography text and one telephone number present" do
+      @student_sam.biography = "This is a fake biography. This text should represent pure awesomeness about the individual. populate accordingly."
+      @student_sam.telephone1 = "9999999"
+      @student_sam.send(:update_is_profile_valid)
+      @student_sam.is_profile_valid.should == true
+    end
+    it "- profile should valid if one social profile and one telephone number present" do
+      @student_sam.facebook = "sam_fb_id"
+      @student_sam.telephone1 = "9999999"
+      @student_sam.send(:update_is_profile_valid)
+      @student_sam.is_profile_valid.should == true
+    end
+    it "notify about missing fields should send out an email" do
+      @student_sam.send(:update_is_profile_valid)  
+      ActionMailer::Base.delivery_method = :test
+      ActionMailer::Base.perform_deliveries = true
+      ActionMailer::Base.deliveries = []
+      @student_sam.notify_about_missing_field(:biography, "Please update your profile page on whiteboard. You can provide biography information or even just a link to your social profile.")
+      ActionMailer::Base.deliveries.size.should == 1
+    end
+  end
 
-    # More tests
-    # Effort log should only be set for person that is_student - tested in effort_log
-    # Graduation_year should be set for person that is_student
+  # carrot and stick functionality
+  context "should maintain an updated profile" do
+    before(:each) do
+      @student_sam = FactoryGirl.create(:student_sam)
+      @student_sam.is_profile_valid = false
+    end
+    it "- student should be redirected if first_access is more than 4 weeks ago" do
+      #@student_sam.first_access= DateTime.strptime('01/01/2010 12:00:00', '%d/%m/%Y %H:%M:%S')
+      @student_sam.people_search_first_accessed_at = Time.now - 5.weeks
+      @student_sam.should_be_redirected?.should == true
+    end
+    it "- student should not be redirected if first_access is less than 4 weeks ago" do
+      @student_sam.people_search_first_accessed_at = Time.now - 3.weeks
+      @student_sam.should_be_redirected?.should == false
+    end
+  end
+
+  describe "notifies when there are expired accounts" do
+    before(:each) do
+      ActionMailer::Base.delivery_method = :test
+      ActionMailer::Base.perform_deliveries = true
+      ActionMailer::Base.deliveries = []
+    end
+    it "should send email to IT about expired accounts within the last month" do
+      @student_sam = FactoryGirl.create(:student_sam, is_active: true, expires_at: Date.today - 1.day)
+      @student_sally = FactoryGirl.create(:student_sally, is_active: true, expires_at: Date.today - 1.month)
+      User.notify_it_about_expired_accounts()
+      ActionMailer::Base.deliveries.size.should == 1
+      ActionMailer::Base.deliveries.first.to_s.should include Rails.application.routes.url_helpers.user_url(@student_sam, :host => "whiteboard.sv.cmu.edu").to_s
+      ActionMailer::Base.deliveries.first.to_s.should include Rails.application.routes.url_helpers.user_url(@student_sally, :host => "whiteboard.sv.cmu.edu").to_s
+    end
+
+    it "should NOT send email for accounts that do not expire" do
+      @student_sam = FactoryGirl.create(:student_sam, is_active: true, expires_at: nil)
+      User.notify_it_about_expired_accounts()
+      ActionMailer::Base.deliveries.size.should == 0
+    end
+
+    it "should NOT send email for accounts expired more than month ago but should DO send email for accounts expired within one month ago" do
+      @student_sam = FactoryGirl.create(:student_sam, is_active: true, expires_at: Date.today - 1.month - 1.day)
+      @student_sally = FactoryGirl.create(:student_sally, is_active: true, expires_at: Date.today - 1.month + 1.day)
+      User.notify_it_about_expired_accounts()
+      ActionMailer::Base.deliveries.size.should == 1
+      ActionMailer::Base.deliveries.first.to_s.should_not include Rails.application.routes.url_helpers.user_url(@student_sam, :host => "whiteboard.sv.cmu.edu").to_s
+      ActionMailer::Base.deliveries.first.to_s.should include Rails.application.routes.url_helpers.user_url(@student_sally, :host => "whiteboard.sv.cmu.edu").to_s
+    end
+
+    it "should NOT send for inactive accounts" do
+      @student_sam = FactoryGirl.create(:student_sam, is_active: false, expires_at: Date.today - 1.day)
+      User.notify_it_about_expired_accounts()
+      ActionMailer::Base.deliveries.size.should == 0
+    end
+
+  end
+
+  # More tests
+  # Effort log should only be set for person that is_student - tested in effort_log
+  # Graduation_year should be set for person that is_student
+
 
 end

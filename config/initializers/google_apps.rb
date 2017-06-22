@@ -1,10 +1,35 @@
+GOOGLE_USERNAME = ENV['WHITEBOARD_GOOGLE_USERNAME'] || "account@sandbox.sv.cmu.edu"
+GOOGLE_PASSWORD = ENV['WHITEBOARD_GOOGLE_PASSWORD'] || "password"
+GOOGLE_DOMAIN = ENV['WHITEBOARD_GOOGLE_DOMAIN'] || "sandbox.sv.cmu.edu"
 
-#AMAZON_S3_CONFIG = YAML.load_file("#{RAILS_ROOT}/config/amazon_s3.yml")[RAILS_ENV]
-#SYSTEMS_CONFIG = YAML.load_file("#{RAILS_ROOT}/config/systems.yml")
+#This code works for a person's email address or a team's distribution list
+def switch_sv_to_west(email_address)
+  return nil if email_address.nil?
+  (name, domain) = email_address.split('@')
+  if(domain == 'sv.cmu.edu')
+    email_address = name + '@west.cmu.edu'
+  end
+  return email_address
+end
 
-GOOGLE_USERNAME = ENV['GOOGLE_USERNAME'] || "team.deming@sandbox.sv.cmu.edu"
-GOOGLE_PASSWORD = ENV['GOOGLE_PASSWORD'] || "MfSE@sv"
-GOOGLE_DOMAIN = ENV['GOOGLE_DOMAIN'] || "sandbox.sv.cmu.edu"
+def switch_west_to_sv(email_address)
+  return nil if email_address.nil?
+  (name, domain) = email_address.split('@')
+  if(domain == 'west.cmu.edu')
+    email_address = name + '@sv.cmu.edu'
+  end
+  return email_address
+end
+
+
+
+
+
+
+
+
+
+
 
 require 'gappsprovisioning/provisioningapi'
 include GAppsProvisioning
@@ -16,30 +41,11 @@ rescue
   @google_apps_connection = ProvisioningApi.new(GOOGLE_USERNAME, GOOGLE_PASSWORD)
 end
 
-#This code works for a person's email address or a team's distribution list
-def switch_sv_to_west(email_address)
-     return nil if email_address.nil?
-     (name, domain) = email_address.split('@')
-     if(domain == "sv.cmu.edu")
-        email_address = name + "@west.cmu.edu"
-     end
-     return email_address
-end
-
-def switch_west_to_sv(email_address)
-      return nil if email_address.nil?
-     (name, domain) = email_address.split('@')
-     if(domain == "west.cmu.edu")
-        email_address = name + "@sv.cmu.edu"
-     end
-     return email_address
-end
-
 def pretty_print_google_error(e)
-    logger.debug "errorcode = " +e.code + "input : " + e.input + "reason : "+e.reason
-    return "Mailing list already exists." if e.code.to_i == 1300
-    return "Mailing list does not exist." if e.code.to_i == 1301
-    return e.reason + " (" + e.code + ") for " + e.input + "."
+    logger.debug 'errorcode = ' +e.code + 'input : ' + e.input + 'reason : '+e.reason
+    return 'Mailing list already exists.' if e.code.to_i == 1300
+    return 'Mailing list does not exist.' if e.code.to_i == 1301
+    return e.reason + ' (' + e.code + ') for ' + e.input + '.'
 end
 
 

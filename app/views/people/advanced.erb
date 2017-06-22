@@ -1,48 +1,44 @@
 <% content_for :title, 'People' %>
 
 <% content_for :tablesorter do %>
-    <%= javascript_include_tag 'tablesorter' %>
-    <%= javascript_include_tag 'tablesorter_filter' %>
+
+    <%= javascript_include_tag 'jquery_tablesorter_min.js' %>
+    <%= javascript_include_tag 'jquery_quicksearch.js' %>
+
     <script type="text/javascript">
         $(document).ready(function () {
-                    if ($("#filterBoxOne").prop("disabled") == true) {
-                        $('#filterBoxOne').val('');
-                        $('#filterBoxOne').removeAttr("disabled");
-                        $('#filterBoxOne').focus();
-                    }
-                    $("#people_table").tablesorter({widgets:['zebra'],
-                        headers:{2:{sorter:false}  },
-                        sortList:[
-                            [0, 0],
-                            [1, 0]
-                        ]})
-                            .tablesorterFilter({ filterContainer:$("#filterBoxOne"),
-                                filterClearContainer:$("#filterClearOne"),
-                                filterColumns:[0, 1, 3, 4, 5],
-                                filterCaseSensitive:false
-                            });
+            var $search = $("#filterBoxOne");
+            if ($search.prop("disabled") == true) {
+                $search.val('');
+                $search.removeAttr("disabled");
+                $search.focus();
+            }
+            $("#people_table").tablesorter({
+                // add zebra striping style
+                widgets:['zebra'],
+                // don't allow sorting on the picture and contact details columns
+                headers:{0:{sorter:false}, 3:{sorter:false}}
+            });
+            $search.quicksearch('#people_table tbody tr');
 
-                    //scroll the message box to the top offset of browser's scrool bar
-                    $(window).scroll(function () {
-                        $('#image_box').animate({top:$(window).scrollTop() + "px" }, {queue:false, duration:350});
-                    });
-                    //when the close button at right corner of the message box is clicked
-                    $('#close_image_box').click(function () {
-                        //the messagebox gets scroll down with top property and gets hidden with zero opacity
-                        $('#image_box').animate({ top:"+=15px", opacity:0 }, "slow");
-                        $('#image_box').hide();
-                    });
+            //scroll the message box to the top offset of browser's scrool bar
+            $(window).scroll(function () {
+                $('#image_box').animate({top:$(window).scrollTop() + "px" }, {queue:false, duration:350});
+            });
+            //when the close button at right corner of the message box is clicked
+            $('#close_image_box').click(function () {
+                //the messagebox gets scroll down with top property and gets hidden with zero opacity
+                $('#image_box').animate({ top:"+=15px", opacity:0 }, "slow");
+                $('#image_box').hide();
+            });
 
-                    //hovering over a line selects it
-                    $("tr").hover(
-                            function () {
-                                $(this).addClass("hover");
-                            },
-                            function () {
-                                $(this).removeClass("hover");
-                            });
-                }
-        );
+            //hovering over a line selects it
+            $("tr").hover(function () {
+                $(this).addClass("hover");
+            },function () {
+                $(this).removeClass("hover");
+            });
+        });
 
         function toggleStudents() {
             /* we don't use .toggle since the state may be inaccurate from a page reload */
@@ -83,7 +79,7 @@
 </div>
 
 <div id="image_box">
-  <%= image_tag("/images/mascot.jpg", :width => "150", :alt => "Temporary Picture", :id => "image_box_image") %><%= image_tag("/images/tablesorter/cross.png", :width => "16", :height => "16", :alt => "Close Me", :style => "float:right;cursor:pointer", :id => "close_image_box") %>
+  <%= image_tag("mascot.jpg", :width => "150", :alt => "Temporary Picture", :id => "image_box_image") %><%= image_tag("tablesorter/cross.png", :width => "16", :height => "16", :alt => "Close Me", :style => "float:right;cursor:pointer", :id => "close_image_box") %>
   <div id='image_box_label'></div>
 </div>
 
@@ -110,14 +106,14 @@
         <% end %>
         <% if person.is_staff %>staff
         <% end %>" onmouseover="updateImage('<%= image_path(person.image_uri) %>','<%=person.human_name%>')">
-        <td><%= twiki_user_link(person.twiki_name, person.first_name) %></td>
-        <td><%= twiki_user_link(person.twiki_name, person.last_name) %></td>
+        <td><%= link_to person.first_name, person_path(person.twiki_name) %></td>
+        <td><%= link_to person.last_name, person_path(person.twiki_name) %></td>
         <td>
-          <a href='http://info.sv.cmu.edu/twiki/bin/view/Main/<%= person.twiki_name %>' target='_top'><%= image_tag('/images/twiki.gif', :width => '16', :height => '16', :border => "0", :alt => "My TWiki page", :title => "My TWiki page") %></a>
-          <% if person.is_adobe_connect_host %><%= image_tag("/images/connect.gif", :width => "16", :height => "16", :alt => "Adobe Connect Host", :title => "I am Adobe Connect Host") %>
+          <a href='http://info.sv.cmu.edu/twiki/bin/view/Main/<%= person.twiki_name %>' target='_top'><%= image_tag('twiki.gif', :width => '16', :height => '16', :border => "0", :alt => "My TWiki page", :title => "My TWiki page") %></a>
+          <% if person.is_adobe_connect_host %><%= image_tag("connect.gif", :width => "16", :height => "16", :alt => "Adobe Connect Host", :title => "I am Adobe Connect Host") %>
           <% end %>
           <% if current_user.is_staff? || current_user.is_admin? %>
-              <%= link_to image_tag("/images/my_teams2.gif", :width => "16", :height => "16", :alt => "My Teams", :title => "My Teams"), my_teams_path(person.id) %>
+              <%= link_to image_tag("my_teams2.gif", :width => "16", :height => "16", :alt => "My Teams", :title => "My Teams"), my_teams_path(person.id) %>
           <% end %>
         </td>
         <td><%= h person.graduation_year %></td>

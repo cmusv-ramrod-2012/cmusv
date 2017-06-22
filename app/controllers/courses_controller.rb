@@ -10,6 +10,8 @@ class CoursesController < ApplicationController
     @courses = Course.order("year DESC, semester DESC, number ASC").all
     @courses = @courses.sort_by { |c| -c.sortable_value } # note the '-' is for desc sorting
 
+    @registered_for_these_courses_during_current_semester = current_person.registered_for_these_courses_during_current_semester
+    @teaching_these_courses_during_current_semester = current_person.teaching_these_courses_during_current_semester
   end
 
   def index_for_semester
@@ -63,24 +65,11 @@ class CoursesController < ApplicationController
   # GET /courses/1.xml
   def show
     @course = Course.find(params[:id])
+    first_version_of_course = Course.first_offering_for_course_name(@course.name)
+    @whiteboard_curriculum_page = first_version_of_course.pages[0] if first_version_of_course.pages.present?
 
-    teams = Team.where(:course_id => params[:id])
-
-    @emails = []
-    teams.each do |team|
-      team.members.each do |user|
-        @emails << user.email
-      end
-    end
-
-    @students = Hash.new
-    @course.registered_students.each do |student|
-      @students[student.human_name] = {:hub => true}
-    end
-    @course.teams.each do |team|
-      team.members.each do |user|
-        @students[user.human_name] = (@students[user.human_name] || Hash.new).merge({:team => true, :team_name => team.name})
-      end
+    if (can? :teach, @course) || current_user.is_admin?
+      @students = @course.registered_students_and_students_on_teams_hash
     end
 
     respond_to do |format|
@@ -89,11 +78,24 @@ class CoursesController < ApplicationController
     end
   end
 
+  def tool_support
+    @course = Course.find(params[:id])
+    authorize! :teach, @course
+
+    teams = Team.where(:course_id => params[:id])
+    @emails = []
+    teams.each do |team|
+      team.members.each do |user|
+        @emails << user.email
+      end
+    end
+  end
+
   # GET /courses/new
   # GET /courses/new.xml
   def new
     authorize! :create, Course
-    @course = Course.new
+    @course = Course.new(:grading_rule => GradingRule.new)
     @course.semester = AcademicCalendar.next_semester
     @course.year = AcademicCalendar.next_semester_year
 
@@ -105,8 +107,12 @@ class CoursesController < ApplicationController
 
   # GET /courses/1/edit
   def edit
+    @is_in_grade_book = true
     store_previous_location
     @course = Course.find(params[:id])
+    if @course.grading_rule.nil?
+      @course.grading_rule = GradingRule.new
+    end
     authorize! :update, @course
   end
 
@@ -127,7 +133,6 @@ class CoursesController < ApplicationController
 
     @course.year = params[:course][:year]
     @course.semester = params[:course][:semester]
-
     respond_to do |format|
       @course.updated_by_user_id = current_user.id if current_user
       if @course.save
@@ -155,23 +160,16 @@ class CoursesController < ApplicationController
       @course.configured_by_user_id = current_user.id
     end
 
-    params[:course][:faculty_assignments_override] = params[:people]
+    params[:course][:faculty_assignments_override] = params[:teachers]
     respond_to do |format|
       @course.updated_by_user_id = current_user.id if current_user
       @course.attributes = params[:course]
       if @course.save
-        if (params[:course][:is_configured])
-          #The previous page was configure action
-          CourseMailer.configure_course_admin_email(@course).deliver
-        else
-          #The previous page was edit action
-          CourseMailer.configure_course_faculty_email(@course).deliver unless @course.is_configured?
-        end
         flash[:notice] = 'Course was successfully updated.'
         format.html { redirect_back_or_default(course_path(@course)) }
         format.xml { head :ok }
       else
-        format.html { render :action => "edit" }
+        format.html { render :action => "configure" }
         format.xml { render :xml => @course.errors, :status => :unprocessable_entity }
       end
     end

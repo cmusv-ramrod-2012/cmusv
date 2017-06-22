@@ -1,37 +1,31 @@
 <% content_for :tablesorter do %>
-    <%= javascript_include_tag 'tablesorter' %>
-    <%= javascript_include_tag 'tablesorter_filter' %>
+
+    <%= javascript_include_tag 'jquery_tablesorter_min.js' %>
+    <%= javascript_include_tag 'jquery_quicksearch.js' %>
+
     <script type="text/javascript">
         $(document).ready(function () {
-                    if ($("#filterBoxOne").prop("disabled") == true) {
-                        $('#filterBoxOne').val('');
-                        $('#filterBoxOne').removeAttr("disabled");
-                        $('#filterBoxOne').focus();
-                    }
-
-                    $("#allocation_table").tablesorter({widgets:['zebra'],
-                        headers:{4:{sorter:false}, 5:{sorter:false}  },
-                        sortList:[
-                            [0, 0],
-                            [1, 0]
-                        ]})
-                            .tablesorterFilter({ filterContainer:$("#filterBoxOne"),
-                                filterClearContainer:$("#filterClearOne"),
-                                filterColumns:[0, 1, 2, 3],
-                                filterCaseSensitive:false
-                            });
-
-
-                    //hovering over a line selects it
-                    $("tr").hover(
-                            function () {
-                                $(this).addClass("hover");
-                            },
-                            function () {
-                                $(this).removeClass("hover");
-                            });
-                }
-        );
+            var $search = $("#filterBoxOne");
+            if ($search.prop("disabled") == true) {
+                $search.val('');
+                $search.removeAttr("disabled");
+                $search.focus();
+            }
+            $("#allocation_table").tablesorter({
+                headers:{4:{sorter:false}, 5:{sorter:false}  },
+                sortList:[
+                  [0, 0],
+                  [1, 0]
+                ]
+            });
+            $search.quicksearch('#allocation_table tbody tr');
+            //hovering over a line selects it
+            $("tr").hover(function () {
+                $(this).addClass("hover");
+            },function () {
+                $(this).removeClass("hover");
+            });
+        });
     </script>
 <% end %>
 

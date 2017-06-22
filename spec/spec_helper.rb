@@ -3,8 +3,8 @@ if ENV['COVERAGE']
   SimpleCov.start 'rails'
 end
 # This file is copied to spec/ when you run 'rails generate rspec:install'
-ENV["RAILS_ENV"] ||= 'test'
-require File.expand_path("../../config/environment", __FILE__)
+ENV['RAILS_ENV'] ||= 'test'
+require File.expand_path('../../config/environment', __FILE__)
 require 'rspec/rails'
 
 #include Capybara::DSL
@@ -28,16 +28,23 @@ module ControllerMacros
 end
 
 module IntegrationSpecHelper
-  def login_with_oauth(user, service = :google_apps)
+  def login_with_oauth(user, service = :google_oauth2)
       OmniAuth.config.test_mode = true
-      OmniAuth.config.add_mock(:google_apps, {
-       :user_info => {:email => user.email,
+      OmniAuth.config.add_mock(:google_oauth2, {
+       :info => {:email => user.email,
           :name => user.human_name,
           :first_name => user.first_name,
           :last_name => user.last_name }
       })
     visit "/users/auth/#{service}"
   end
+
+  def login_with_warden(user, service = :google_oauth2)
+    Warden.test_mode!
+    @current_user = User.find(user.id)
+    login_as(@current_user, :scope => :user, :run_callbacks => false)
+  end
+
 end
 
 RSpec.configure do |config|
@@ -52,25 +59,44 @@ RSpec.configure do |config|
   # instead of true.
   config.use_transactional_fixtures = true
 
-  if ENV['CI'] == "true"
+  if ENV['CI'] == 'true'
     config.filter_run_excluding :skip_on_build_machine => true
+  else
+    config.filter_run_excluding :skip_on_local_machine => true
   end
 
-#  config.include ControllerMacros, :type => :controller
-  config.include IntegrationSpecHelper, :type => :request
+  config.include IntegrationSpecHelper, :type => :feature
 
   config.include Devise::TestHelpers, :type => :controller
   config.include Devise::TestHelpers, :type => :view
 
   config.include Paperclip::Shoulda::Matchers
+
+
 #  config.include Helpers
 end
 
-Capybara.default_host = 'http://rails.sv.cmu.edu'
+Capybara.default_host = 'http://whiteboard.sv.cmu.edu'
 
+FactoryGirl.duplicate_attribute_assignment_from_initialize_with = false
 
 include ControllerMacros
 
 ## Forces all threads to share the same connection. This works on
 ## Capybara because it starts the web server in a thread.
 #ActiveRecord::Base.shared_connection = ActiveRecord::Base.connection
+
+
+class ActiveRecord::Base
+  mattr_accessor :shared_connection
+  @@shared_connection = nil
+
+  def self.connection
+    @@shared_connection || retrieve_connection
+  end
+end
+
+# Forces all threads to share the same connection. This works on
+# Capybara because it starts the web server in a thread.
+ActiveRecord::Base.shared_connection = ActiveRecord::Base.connection
+

@@ -39,28 +39,28 @@
 <p>
   <b><%= h @course.primary_faculty_label %></b>
   <% if @team.primary_faculty %>
-      <%= twiki_user_link(@team.primary_faculty.twiki_name, @team.primary_faculty.human_name) %>
+      <%= link_to @team.primary_faculty.human_name, person_path(@team.primary_faculty.twiki_name) %>
   <% end %>
 </p>
 
 <p>
   <b><%= h @course.secondary_faculty_label %></b>
   <% if @team.secondary_faculty %>
-      <%= twiki_user_link(@team.secondary_faculty.twiki_name, @team.secondary_faculty.human_name) %>
+    <%= link_to @team.secondary_faculty.human_name, person_path(@team.secondary_faculty.twiki_name) %>
   <% end %>
 </p>
 
 <p>
   <b>Team Members: </b>
   <% @team.members.each do |user| %>
-      <%= render :partial => 'people/twiki_photo_link', :locals => {:person => user} %>
+      <%= render :partial => 'people/profile_photo', :locals => {:person => user} %>
   <% end %>
 </p>
 <br style="clear:both;"/>
 <% if current_user && (current_user.is_staff || current_user.is_admin) %>
     <h2>Faculty Helpers</h2>
     <a href="<%= url_for :action => "peer_evaluation", :id => params[:id], :course_id => params[:course_id], :only_path => true %>">
-      <%= image_tag("/images/peer_evaluation2.jpg", :size => "99x71", :border => "0") %><p>Peer Evaluation Tool</p></a>
+      <%= image_tag("peer_evaluation2.jpg", :size => "99x71", :border => "0") %><p>Peer Evaluation Tool</p></a>
 
 <% end %>
 <br style="clear:both;"/>
